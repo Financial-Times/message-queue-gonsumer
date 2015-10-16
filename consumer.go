@@ -1,0 +1,77 @@
+package consumer
+
+import (
+	"fmt"
+	"log"
+	"time"
+)
+
+type MsgListener interface {
+	OnMessage(msg Message) error
+}
+
+type Consumer struct {
+	proxy proxy
+}
+
+func NewConsumer(addr, group, topic, queue string) *Consumer {
+	proxy := proxy{
+		addr:   addr,
+		group:  group,
+		topic:  topic,
+		queue:  queue,
+		caller: defaultProxyCaller{},
+	}
+	return &Consumer{proxy}
+}
+
+func (q *Consumer) Consume(msgListener MsgListener, backoff int) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			var ok bool
+			err, ok = r.(error)
+			if !ok {
+				err = fmt.Errorf("Error: recovered from panic: %v", r)
+			}
+		}
+	}()
+
+	for {
+		nr, err := q.consumeNow(msgListener)
+		if err != nil || nr == 0 {
+			time.Sleep(time.Duration(backoff) * time.Second)
+		}
+
+	}
+	return nil
+}
+
+func (q *Consumer) consumeNow(msgListener MsgListener) (nr int, err error) {
+	c, err := q.proxy.createConsumerInstance()
+	if err != nil {
+		log.Printf("ERROR - creating consumer instance: %s", err.Error())
+		return 0, err
+	}
+
+	msgs, err := q.proxy.consumeMessages(c)
+	if err != nil {
+		log.Printf("ERROR - consuming messages: %s", err.Error())
+		return 0, err
+	}
+
+	for _, m := range msgs {
+		msgListener.OnMessage(m)
+	}
+
+	err = q.proxy.destroyConsumerInstance(c)
+	if err != nil {
+		log.Printf("ERROR - deleting consumer instance: %s", err.Error())
+		return 0, err
+	}
+	return len(msgs), nil
+}
+
+type Message struct {
+	Headers map[string]string
+	Body    string
+}
