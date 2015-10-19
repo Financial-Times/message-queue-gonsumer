@@ -84,12 +84,14 @@ func (p defaultProxyCaller) DoReq(method, url string, body io.Reader, headers ma
 func (p proxy) destroyConsumerInstance(c consumer) (err error) {
 	url, _ := p.buildDeleteConsumerURL(c)
 	_, err = p.caller.DoReq("DELETE", url, nil, nil, http.StatusNoContent)
+	//to implement
 	return
 }
 
 func (p proxy) consumeMessages(c consumer) ([]Message, error) {
 	url, _ := p.buildConsumeMsgsURL(c)
 	_, _ = p.caller.DoReq("GET", url, nil, map[string]string{"Accept": "application/json"}, http.StatusOK)
+	//to implement
 	return make([]Message, 0, 0), nil
 }
 
@@ -104,5 +106,6 @@ func (p proxy) buildDeleteConsumerURL(c consumer) (baseUrl string, err error) {
 }
 
 func (p proxy) buildConsumeMsgsURL(c consumer) (baseUrl string, err error) {
+	//to implement
 	return "", nil
 }
