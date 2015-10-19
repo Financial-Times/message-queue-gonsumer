@@ -23,10 +23,6 @@ type consumer struct {
 	InstanceId string `json:",instance_id"`
 }
 
-type message struct {
-	//to implement
-}
-
 type proxyCaller interface {
 	DoReq(method, addr string, body io.Reader, headers map[string]string, expectedStatus int) ([]byte, error)
 }
