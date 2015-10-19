@@ -49,7 +49,7 @@ func (q *Consumer) Consume(msgListener MsgListener, backoff int) (err error) {
 const defaultBackoffPeriod = 8
 
 func (q *Consumer) ConsumeCh(c chan<- Message) error {
-	return q.Consume(defaultMsgListener{c}, defaultBackoffPeriod)
+	return q.Consume(defaultChMsgListener{c}, defaultBackoffPeriod)
 }
 
 type defaultChMsgListener struct {
