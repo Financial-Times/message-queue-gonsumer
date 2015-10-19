@@ -37,7 +37,7 @@ func (q *Consumer) Consume(msgListener MsgListener, backoff int) (err error) {
 	}()
 
 	for {
-		nr, err := q.consumeNow(msgListener)
+		nr, err := q.consume(msgListener)
 		if err != nil || nr == 0 {
 			time.Sleep(time.Duration(backoff) * time.Second)
 		}
@@ -46,7 +46,7 @@ func (q *Consumer) Consume(msgListener MsgListener, backoff int) (err error) {
 	return nil
 }
 
-func (q *Consumer) consumeNow(msgListener MsgListener) (nr int, err error) {
+func (q *Consumer) consume(msgListener MsgListener) (nr int, err error) {
 	c, err := q.proxy.createConsumerInstance()
 	if err != nil {
 		log.Printf("ERROR - creating consumer instance: %s", err.Error())
