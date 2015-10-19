@@ -46,6 +46,21 @@ func (q *Consumer) Consume(msgListener MsgListener, backoff int) (err error) {
 	return nil
 }
 
+const defaultBackoffPeriod = 8
+
+func (q *Consumer) ConsumeCh(c chan<- Message) error {
+	return q.Consume(defaultMsgListener{c}, defaultBackoffPeriod)
+}
+
+type defaultChMsgListener struct {
+	ch chan<- Message
+}
+
+func (d defaultChMsgListener) OnMessage(m Message) error {
+	d.ch <- m
+	return nil
+}
+
 func (q *Consumer) consume(msgListener MsgListener) (nr int, err error) {
 	c, err := q.proxy.createConsumerInstance()
 	if err != nil {
