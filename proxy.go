@@ -106,6 +106,12 @@ func (p proxy) buildDeleteConsumerURL(c consumer) (baseUrl string, err error) {
 }
 
 func (p proxy) buildConsumeMsgsURL(c consumer) (baseUrl string, err error) {
-	//to implement
-	return "", nil
+	uri, err := url.Parse(c.BaseURI)
+	if err != nil {
+		log.Printf("ERROR - parsing base URI: %s", err.Error())
+		return
+	}
+	uri.Host = p.addr
+	uri.Path = strings.TrimRight(uri.Path, "/") + "/topics/" + p.topic
+	return uri.String(), nil
 }
