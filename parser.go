@@ -8,6 +8,16 @@ import (
 	"strings"
 )
 
+type response struct {
+	msg []message
+}
+
+type message struct {
+	value     string //base64 encoded
+	partition string
+	offset    string
+}
+
 func parseResponse(data []byte) []Message {
 	var resp *response
 	err := json.Unmarshal(data, resp)
@@ -36,19 +46,13 @@ func parseMessage(raw string) (m Message) {
 	return
 }
 
-func parseBody(msg string) string {
-	//naive
-	f := strings.Index(msg, "{")
-	l := strings.LastIndex(msg, "}")
-	return msg[f : l+1]
-}
-
 var re = regexp.MustCompile("[\\w-]*:[\\w\\-:/. ]*")
 
 var kre = regexp.MustCompile("[\\w-]*:")
 var vre = regexp.MustCompile(":[\\w-:/. ]*")
 
 func parseHeaders(msg string) map[string]string {
+	//naive
 	i := strings.Index(msg, "{")
 	headerLines := re.FindAllString(msg[:i], -1)
 
@@ -65,13 +69,9 @@ func parseHeader(header string) (string, string) {
 	value := vre.FindString(header)
 	return key[:len(key)-1], strings.TrimSpace(value[1:])
 }
-
-type response struct {
-	msg []message
-}
-
-type message struct {
-	value     string //base64 encoded
-	partition string
-	offset    string
+func parseBody(msg string) string {
+	//naive
+	f := strings.Index(msg, "{")
+	l := strings.LastIndex(msg, "}")
+	return msg[f : l+1]
 }

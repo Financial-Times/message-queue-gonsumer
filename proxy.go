@@ -18,16 +18,13 @@ type proxy struct {
 	caller proxyCaller
 }
 
-type consumer struct {
-	BaseURI    string `json:"base_uri"`
-	InstanceId string `json:",instance_id"`
-}
-
 type proxyCaller interface {
 	DoReq(method, addr string, body io.Reader, headers map[string]string, expectedStatus int) ([]byte, error)
 }
 
-type defaultProxyCaller struct {
+type consumer struct {
+	BaseURI    string `json:"base_uri"`
+	InstanceId string `json:",instance_id"`
 }
 
 const createConsumerReq = `{"auto.offset.reset": "smallest", "auto.commit.enable": "true"}`
@@ -83,6 +80,9 @@ func (p proxy) buildConsumeMsgsURL(c consumer) (baseUrl string, err error) {
 	uri.Host = p.addr
 	uri.Path = strings.TrimRight(uri.Path, "/") + "/topics/" + p.topic
 	return uri.String(), nil
+}
+
+type defaultProxyCaller struct {
 }
 
 func (p defaultProxyCaller) DoReq(method, url string, body io.Reader, headers map[string]string, expectedStatus int) (data []byte, err error) {

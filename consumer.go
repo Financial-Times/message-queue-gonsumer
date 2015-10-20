@@ -14,6 +14,11 @@ type Consumer struct {
 	proxy proxy
 }
 
+type Message struct {
+	Headers map[string]string
+	Body    string
+}
+
 func NewConsumer(addr, group, topic, queue string) *Consumer {
 	proxy := proxy{
 		addr:   addr,
@@ -84,9 +89,4 @@ func (q *Consumer) consume(msgListener MsgListener) (nr int, err error) {
 		return 0, err
 	}
 	return len(msgs), nil
-}
-
-type Message struct {
-	Headers map[string]string
-	Body    string
 }

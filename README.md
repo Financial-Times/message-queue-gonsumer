@@ -3,6 +3,5 @@ Go implementation of https://github.com/Financial-Times/message-queue-consumer l
 
 ###ToDo
 
-1. Structural reformatting
-2. Tests
-3. Golint & govet
+1. Tests
+2. Golint & govet
