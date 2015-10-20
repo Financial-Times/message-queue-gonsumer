@@ -11,7 +11,7 @@ type MsgListener interface {
 }
 
 type Consumer struct {
-	proxy proxy
+	proxy QueueConfig
 }
 
 type Message struct {
@@ -20,11 +20,11 @@ type Message struct {
 }
 
 func NewConsumer(addr, group, topic, queue string) *Consumer {
-	proxy := proxy{
-		addr:   addr,
-		group:  group,
-		topic:  topic,
-		queue:  queue,
+	proxy := QueueConfig{
+		Addr:   addr,
+		Group:  group,
+		Topic:  topic,
+		Queue:  queue,
 		caller: defaultProxyCaller{},
 	}
 	return &Consumer{proxy}

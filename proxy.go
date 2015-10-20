@@ -10,11 +10,11 @@ import (
 	"strings"
 )
 
-type proxy struct {
-	addr   string
-	topic  string
-	group  string
-	queue  string
+type QueueConfig struct {
+	Addr   string
+	Group  string
+	Topic  string
+	Queue  string
 	caller proxyCaller
 }
 
@@ -29,8 +29,8 @@ type consumer struct {
 
 const createConsumerReq = `{"auto.offset.reset": "smallest", "auto.commit.enable": "true"}`
 
-func (p proxy) createConsumerInstance() (c consumer, err error) {
-	data, err := p.caller.DoReq("POST", p.addr+"/consumers/"+p.group, strings.NewReader(createConsumerReq), map[string]string{"Content-Type": "application/json"}, http.StatusOK)
+func (q QueueConfig) createConsumerInstance() (c consumer, err error) {
+	data, err := q.caller.DoReq("POST", q.Addr+"/consumers/"+q.Group, strings.NewReader(createConsumerReq), map[string]string{"Content-Type": "application/json"}, http.StatusOK)
 
 	if err != nil {
 		return
@@ -45,15 +45,15 @@ func (p proxy) createConsumerInstance() (c consumer, err error) {
 	return
 }
 
-func (p proxy) destroyConsumerInstance(c consumer) (err error) {
-	url, _ := p.buildDeleteConsumerURL(c)
-	_, err = p.caller.DoReq("DELETE", url, nil, nil, http.StatusNoContent)
+func (q QueueConfig) destroyConsumerInstance(c consumer) (err error) {
+	url, _ := q.buildDeleteConsumerURL(c)
+	_, err = q.caller.DoReq("DELETE", url, nil, nil, http.StatusNoContent)
 	return
 }
 
-func (p proxy) consumeMessages(c consumer) ([]Message, error) {
-	url, _ := p.buildConsumeMsgsURL(c)
-	data, err := p.caller.DoReq("GET", url, nil, map[string]string{"Accept": "application/json"}, http.StatusOK)
+func (q QueueConfig) consumeMessages(c consumer) ([]Message, error) {
+	url, _ := q.buildConsumeMsgsURL(c)
+	data, err := q.caller.DoReq("GET", url, nil, map[string]string{"Accept": "application/json"}, http.StatusOK)
 	if err != nil {
 		return nil, err
 	}
@@ -61,24 +61,24 @@ func (p proxy) consumeMessages(c consumer) ([]Message, error) {
 	return parseResponse(data), nil
 }
 
-func (p proxy) buildDeleteConsumerURL(c consumer) (baseUrl string, err error) {
+func (q QueueConfig) buildDeleteConsumerURL(c consumer) (baseUrl string, err error) {
 	uri, err := url.Parse(c.BaseURI)
 	if err != nil {
 		log.Printf("ERROR - parsing base URI: %s", err.Error())
 		return
 	}
-	uri.Host = p.addr
+	uri.Host = q.Addr
 	return uri.String(), nil
 }
 
-func (p proxy) buildConsumeMsgsURL(c consumer) (baseUrl string, err error) {
+func (q QueueConfig) buildConsumeMsgsURL(c consumer) (baseUrl string, err error) {
 	uri, err := url.Parse(c.BaseURI)
 	if err != nil {
 		log.Printf("ERROR - parsing base URI: %s", err.Error())
 		return
 	}
-	uri.Host = p.addr
-	uri.Path = strings.TrimRight(uri.Path, "/") + "/topics/" + p.topic
+	uri.Host = q.Addr
+	uri.Path = strings.TrimRight(uri.Path, "/") + "/topics/" + q.Topic
 	return uri.String(), nil
 }
 
