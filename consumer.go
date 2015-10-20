@@ -11,7 +11,7 @@ type MsgListener interface {
 }
 
 type Consumer struct {
-	proxy QueueConfig
+	Queue QueueConfig
 }
 
 type Message struct {
@@ -26,7 +26,7 @@ func NewConsumer(config QueueConfig) *Consumer {
 	return &Consumer{config}
 }
 
-func (q *Consumer) Consume(msgListener MsgListener, backoff int) (err error) {
+func (c *Consumer) Consume(msgListener MsgListener, backoff int) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			var ok bool
@@ -38,7 +38,7 @@ func (q *Consumer) Consume(msgListener MsgListener, backoff int) (err error) {
 	}()
 
 	for {
-		nr, err := q.consume(msgListener)
+		nr, err := c.consume(msgListener)
 		if err != nil || nr == 0 {
 			time.Sleep(time.Duration(backoff) * time.Second)
 		}
@@ -49,8 +49,8 @@ func (q *Consumer) Consume(msgListener MsgListener, backoff int) (err error) {
 
 const defaultBackoffPeriod = 8
 
-func (q *Consumer) ConsumeCh(c chan<- Message) error {
-	return q.Consume(defaultChMsgListener{c}, defaultBackoffPeriod)
+func (c *Consumer) ConsumeCh(ch chan<- Message) error {
+	return c.Consume(defaultChMsgListener{ch}, defaultBackoffPeriod)
 }
 
 type defaultChMsgListener struct {
@@ -62,14 +62,14 @@ func (d defaultChMsgListener) OnMessage(m Message) error {
 	return nil
 }
 
-func (q *Consumer) consume(msgListener MsgListener) (nr int, err error) {
-	c, err := q.proxy.createConsumerInstance()
+func (c *Consumer) consume(msgListener MsgListener) (nr int, err error) {
+	cInst, err := c.Queue.createConsumerInstance()
 	if err != nil {
 		log.Printf("ERROR - creating consumer instance: %s", err.Error())
 		return 0, err
 	}
 
-	msgs, err := q.proxy.consumeMessages(c)
+	msgs, err := c.Queue.consumeMessages(cInst)
 	if err != nil {
 		log.Printf("ERROR - consuming messages: %s", err.Error())
 		return 0, err
@@ -79,7 +79,7 @@ func (q *Consumer) consume(msgListener MsgListener) (nr int, err error) {
 		msgListener.OnMessage(m)
 	}
 
-	err = q.proxy.destroyConsumerInstance(c)
+	err = c.Queue.destroyConsumerInstance(cInst)
 	if err != nil {
 		log.Printf("ERROR - deleting consumer instance: %s", err.Error())
 		return 0, err
