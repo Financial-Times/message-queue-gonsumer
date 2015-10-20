@@ -2,6 +2,7 @@ package consumer
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -100,7 +101,8 @@ func (p defaultProxyCaller) DoReq(method, url string, body io.Reader, headers ma
 	defer resp.Body.Close()
 
 	if resp.StatusCode != expectedStatus {
-		log.Printf("ERROR - unexpected response status: %d", resp.StatusCode)
+		err = fmt.Errorf("Unexpected response status %d. Expected: %d.", resp.StatusCode, expectedStatus)
+		log.Printf("ERROR - %s", err.Error())
 		return
 	}
 
