@@ -21,7 +21,7 @@ type Message struct {
 
 func NewConsumer(config QueueConfig) *Consumer {
 	if config.caller == nil {
-		config.caller = defaultProxyCaller{}
+		config.caller = defaultProxyCaller{config.Queue}
 	}
 	return &Consumer{config}
 }

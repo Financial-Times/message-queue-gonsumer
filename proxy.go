@@ -80,6 +80,7 @@ func (q QueueConfig) buildConsumeMsgsURL(c consumer) (baseUrl string, err error)
 }
 
 type defaultProxyCaller struct {
+	host string
 }
 
 func (p defaultProxyCaller) DoReq(method, url string, body io.Reader, headers map[string]string, expectedStatus int) (data []byte, err error) {
@@ -94,7 +95,9 @@ func (p defaultProxyCaller) DoReq(method, url string, body io.Reader, headers ma
 	for k, v := range headers {
 		req.Header.Add(k, v)
 	}
-	req.Host = "kafka"
+	if len(p.host) > 0 {
+		req.Host = p.host
+	}
 
 	resp, err := client.Do(req)
 	if err != nil {
