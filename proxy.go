@@ -31,17 +31,14 @@ const createConsumerReq = `{"auto.offset.reset": "smallest", "auto.commit.enable
 
 func (q QueueConfig) createConsumerInstance() (c consumer, err error) {
 	data, err := q.caller.DoReq("POST", q.Addr+"/consumers/"+q.Group, strings.NewReader(createConsumerReq), map[string]string{"Content-Type": "application/json"}, http.StatusOK)
-
 	if err != nil {
 		return
 	}
-
 	err = json.Unmarshal(data, &c)
 	if err != nil {
 		log.Printf("ERROR - unmarshalling json content: %s", err.Error())
 		return
 	}
-
 	return
 }
 

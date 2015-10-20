@@ -19,15 +19,11 @@ type Message struct {
 	Body    string
 }
 
-func NewConsumer(addr, group, topic, queue string) *Consumer {
-	proxy := QueueConfig{
-		Addr:   addr,
-		Group:  group,
-		Topic:  topic,
-		Queue:  queue,
-		caller: defaultProxyCaller{},
+func NewConsumer(config QueueConfig) *Consumer {
+	if config.caller == nil {
+		config.caller = defaultProxyCaller{}
 	}
-	return &Consumer{proxy}
+	return &Consumer{config}
 }
 
 func (q *Consumer) Consume(msgListener MsgListener, backoff int) (err error) {
