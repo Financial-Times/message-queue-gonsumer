@@ -9,9 +9,9 @@ import (
 )
 
 type message struct {
-	Value     string //base64 encoded
-	Partition int
-	Offset    int
+	Value     string `json:"value"` //base64 encoded
+	Partition int    `json:"partition"`
+	Offset    int    `json:"offset"`
 }
 
 func parseResponse(data []byte) []Message {
