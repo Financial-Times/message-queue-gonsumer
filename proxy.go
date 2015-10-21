@@ -12,10 +12,10 @@ import (
 )
 
 type QueueConfig struct {
-	Addr   string
-	Group  string
-	Topic  string
-	Queue  string
+	Addr   string `json:"address"`
+	Group  string `json:"group"`
+	Topic  string `json:"topic"`
+	Queue  string `json:"queue"`
 	caller proxyCaller
 }
 
