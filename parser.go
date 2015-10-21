@@ -14,19 +14,19 @@ type message struct {
 	Offset    int    `json:"offset"`
 }
 
-func parseResponse(data []byte) []Message {
+func parseResponse(data []byte) ([]Message, error) {
 	var resp []message
 	err := json.Unmarshal(data, &resp)
 	if err != nil {
 		log.Printf("ERROR - parsing json message %q failed with error %v", data, err.Error())
-		return nil
+		return nil, err
 	}
 	msgs := make([]Message, 0)
 	for _, m := range resp {
 		log.Printf("DEBUG - parsing msg of partition %d and offset %d", m.Partition, m.Offset)
 		msgs = append(msgs, parseMessage(m.Value))
 	}
-	return msgs
+	return msgs, nil
 }
 
 func parseMessage(raw string) (m Message) {

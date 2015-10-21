@@ -56,7 +56,7 @@ func (q QueueConfig) consumeMessages(c consumer) ([]Message, error) {
 	if err != nil {
 		return nil, err
 	}
-	return parseResponse(data), nil
+	return parseResponse(data)
 }
 
 func (q QueueConfig) buildConsumerURL(c consumer) (baseUrl *url.URL, err error) {

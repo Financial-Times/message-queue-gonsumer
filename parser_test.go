@@ -54,7 +54,10 @@ func TestParseResponse(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		actual := parseResponse(test.resp)
+		actual, err := parseResponse(test.resp)
+		if err != nil {
+			t.Errorf("Error: %v", err)
+		}
 		if !reflect.DeepEqual(actual, test.expected) {
 			t.Errorf("\nExpected: %v\nActual: %v", test.expected, actual)
 		}
