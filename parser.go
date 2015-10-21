@@ -10,8 +10,8 @@ import (
 
 type message struct {
 	Value     string //base64 encoded
-	Partition string
-	Offset    string
+	Partition int
+	Offset    int
 }
 
 func parseResponse(data []byte) []Message {
@@ -21,9 +21,9 @@ func parseResponse(data []byte) []Message {
 		log.Printf("ERROR - parsing json message %q failed with error %v", data, err.Error())
 		return nil
 	}
-	msgs := make([]Message, len(resp))
+	msgs := make([]Message, 0)
 	for _, m := range resp {
-		log.Printf("DEBUG - parsing msg of partition %s and offset %s", m.Partition, m.Offset)
+		log.Printf("DEBUG - parsing msg of partition %d and offset %d", m.Partition, m.Offset)
 		msgs = append(msgs, parseMessage(m.Value))
 	}
 	return msgs
