@@ -8,8 +8,8 @@ Usage:
 
 
 There are two ways to use the API:
-1. through consumer.Consume(MsgListener, backoffPeriod), where clients must provide an implementation for the MsgListener
-2. through a channel based consume.ConsumeCh(chan<- Message), where clients receive messages from the provided channel
+1. `consumer.Consume(MsgListener, backoffPeriod)`: clients must provide an implementation for the MsgListener
+2. `consume.ConsumeCh(chan<- Message)`: clients receive messages from the provided channel
 
 
 ```go
