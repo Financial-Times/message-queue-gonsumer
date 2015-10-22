@@ -2,6 +2,7 @@ package consumer
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -11,10 +12,10 @@ import (
 )
 
 type QueueConfig struct {
-	Addr   string
-	Group  string
-	Topic  string
-	Queue  string
+	Addr   string `json:"address"`
+	Group  string `json:"group"`
+	Topic  string `json:"topic"`
+	Queue  string `json:"queue"`
 	caller proxyCaller
 }
 
@@ -43,40 +44,33 @@ func (q QueueConfig) createConsumerInstance() (c consumer, err error) {
 }
 
 func (q QueueConfig) destroyConsumerInstance(c consumer) (err error) {
-	url, _ := q.buildDeleteConsumerURL(c)
-	_, err = q.caller.DoReq("DELETE", url, nil, nil, http.StatusNoContent)
+	url, _ := q.buildConsumerURL(c)
+	_, err = q.caller.DoReq("DELETE", url.String(), nil, nil, http.StatusNoContent)
 	return
 }
 
 func (q QueueConfig) consumeMessages(c consumer) ([]Message, error) {
-	url, _ := q.buildConsumeMsgsURL(c)
-	data, err := q.caller.DoReq("GET", url, nil, map[string]string{"Accept": "application/json"}, http.StatusOK)
+	uri, _ := q.buildConsumerURL(c)
+	uri.Path = strings.TrimRight(uri.Path, "/") + "/topics/" + q.Topic
+	data, err := q.caller.DoReq("GET", uri.String(), nil, map[string]string{"Accept": "application/json"}, http.StatusOK)
 	if err != nil {
 		return nil, err
 	}
-
-	return parseResponse(data), nil
+	return parseResponse(data)
 }
 
-func (q QueueConfig) buildDeleteConsumerURL(c consumer) (baseUrl string, err error) {
+func (q QueueConfig) buildConsumerURL(c consumer) (baseUrl *url.URL, err error) {
 	uri, err := url.Parse(c.BaseURI)
 	if err != nil {
 		log.Printf("ERROR - parsing base URI: %s", err.Error())
 		return
 	}
-	uri.Host = q.Addr
-	return uri.String(), nil
-}
-
-func (q QueueConfig) buildConsumeMsgsURL(c consumer) (baseUrl string, err error) {
-	uri, err := url.Parse(c.BaseURI)
+	addrUrl, err := url.Parse(q.Addr)
 	if err != nil {
-		log.Printf("ERROR - parsing base URI: %s", err.Error())
-		return
+		log.Printf("ERROR - parsing Addr: %s", err.Error())
 	}
-	uri.Host = q.Addr
-	uri.Path = strings.TrimRight(uri.Path, "/") + "/topics/" + q.Topic
-	return uri.String(), nil
+	uri.Host = addrUrl.Host
+	return uri, err
 }
 
 type defaultProxyCaller struct {
@@ -107,7 +101,8 @@ func (p defaultProxyCaller) DoReq(method, url string, body io.Reader, headers ma
 	defer resp.Body.Close()
 
 	if resp.StatusCode != expectedStatus {
-		log.Printf("ERROR - unexpected response status: %d", resp.StatusCode)
+		err = fmt.Errorf("Unexpected response status %d. Expected: %d.", resp.StatusCode, expectedStatus)
+		log.Printf("ERROR - %s", err.Error())
 		return
 	}
 

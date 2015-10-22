@@ -8,31 +8,25 @@ import (
 	"strings"
 )
 
-type response struct {
-	msg []message
-}
-
 type message struct {
-	value     string //base64 encoded
-	partition string
-	offset    string
+	Value     string `json:"value"` //base64 encoded
+	Partition int    `json:"partition"`
+	Offset    int    `json:"offset"`
 }
 
-func parseResponse(data []byte) []Message {
-	var resp *response
-	err := json.Unmarshal(data, resp)
+func parseResponse(data []byte) ([]Message, error) {
+	var resp []message
+	err := json.Unmarshal(data, &resp)
 	if err != nil {
-		log.Printf("ERROR - parsing json message: %v", err.Error())
-		return nil
+		log.Printf("ERROR - parsing json message %q failed with error %v", data, err.Error())
+		return nil, err
 	}
-
-	msgs := make([]Message, len(resp.msg))
-	for _, m := range resp.msg {
-		log.Printf("DEBUG - parsing msg of partition %s and offset %s", m.partition, m.offset)
-		msgs = append(msgs, parseMessage(m.value))
+	msgs := make([]Message, 0)
+	for _, m := range resp {
+		log.Printf("DEBUG - parsing msg of partition %d and offset %d", m.Partition, m.Offset)
+		msgs = append(msgs, parseMessage(m.Value))
 	}
-
-	return msgs
+	return msgs, nil
 }
 
 func parseMessage(raw string) (m Message) {
