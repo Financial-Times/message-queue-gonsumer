@@ -26,10 +26,10 @@ type Message struct {
 }
 
 //NewConsumer returns a pointer to a freshly created consumer.
-//Read more @ proxy.go#QueueConfig.
+//Read more @ queue-caller.go#QueueConfig.
 func NewConsumer(config QueueConfig) *Consumer {
 	if config.caller == nil {
-		config.caller = defaultProxyCaller{config.Queue}
+		config.caller = defaultHTTPCaller{config.Queue}
 	}
 	return &Consumer{config}
 }

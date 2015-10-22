@@ -17,10 +17,10 @@ type QueueConfig struct {
 	Group  string `json:"group"`
 	Topic  string `json:"topic"`
 	Queue  string `json:"queue"`
-	caller proxyCaller
+	caller httpCaller
 }
 
-type proxyCaller interface {
+type httpCaller interface {
 	DoReq(method, addr string, body io.Reader, headers map[string]string, expectedStatus int) ([]byte, error)
 }
 
@@ -74,11 +74,11 @@ func (q QueueConfig) buildConsumerURL(c consumer) (uri *url.URL, err error) {
 	return uri, err
 }
 
-type defaultProxyCaller struct {
+type defaultHTTPCaller struct {
 	host string
 }
 
-func (p defaultProxyCaller) DoReq(method, url string, body io.Reader, headers map[string]string, expectedStatus int) (data []byte, err error) {
+func (p defaultHTTPCaller) DoReq(method, url string, body io.Reader, headers map[string]string, expectedStatus int) (data []byte, err error) {
 	client := http.Client{}
 
 	req, err := http.NewRequest(method, url, body)
