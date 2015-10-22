@@ -9,7 +9,7 @@ Usage:
 
 There are two ways to use the API:
 1. `consumer.Consume(MsgListener, backoffPeriod)`: clients must provide an implementation for the MsgListener
-2. `consume.ConsumeCh(chan<- Message)`: clients receive messages from the provided channel
+2. `consumer.ConsumeCh(chan<- Message)`: clients receive messages from the provided channel
 
 
 ```go
