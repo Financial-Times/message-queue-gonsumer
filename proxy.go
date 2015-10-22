@@ -11,6 +11,7 @@ import (
 	"strings"
 )
 
+//QueueConfig represents the configuration of the queue, consumer group and topic the consumer interested about.
 type QueueConfig struct {
 	Addr   string `json:"address"`
 	Group  string `json:"group"`
@@ -25,7 +26,7 @@ type proxyCaller interface {
 
 type consumer struct {
 	BaseURI    string `json:"base_uri"`
-	InstanceId string `json:",instance_id"`
+	InstanceID string `json:",instance_id"`
 }
 
 const createConsumerReq = `{"auto.offset.reset": "smallest", "auto.commit.enable": "true"}`
@@ -59,17 +60,17 @@ func (q QueueConfig) consumeMessages(c consumer) ([]Message, error) {
 	return parseResponse(data)
 }
 
-func (q QueueConfig) buildConsumerURL(c consumer) (baseUrl *url.URL, err error) {
-	uri, err := url.Parse(c.BaseURI)
+func (q QueueConfig) buildConsumerURL(c consumer) (uri *url.URL, err error) {
+	uri, err = url.Parse(c.BaseURI)
 	if err != nil {
 		log.Printf("ERROR - parsing base URI: %s", err.Error())
 		return
 	}
-	addrUrl, err := url.Parse(q.Addr)
+	addrURL, err := url.Parse(q.Addr)
 	if err != nil {
 		log.Printf("ERROR - parsing Addr: %s", err.Error())
 	}
-	uri.Host = addrUrl.Host
+	uri.Host = addrURL.Host
 	return uri, err
 }
 

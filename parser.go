@@ -21,9 +21,9 @@ func parseResponse(data []byte) ([]Message, error) {
 		log.Printf("ERROR - parsing json message %q failed with error %v", data, err.Error())
 		return nil, err
 	}
-	msgs := make([]Message, 0)
+	var msgs []Message
 	for _, m := range resp {
-		log.Printf("DEBUG - parsing msg of partition %d and offset %d", m.Partition, m.Offset)
+		//log.Printf("DEBUG - parsing msg of partition %d and offset %d", m.Partition, m.Offset)
 		msgs = append(msgs, parseMessage(m.Value))
 	}
 	return msgs, nil
