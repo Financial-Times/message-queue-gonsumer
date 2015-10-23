@@ -22,8 +22,9 @@ type Consumer interface {
 //DefaultConsumer is the de facto implementation of the Consumer interface which is used by the client.
 //By calling the NewConsumer(QueueConfig) function the DefaultConsumer impl of the Consumer interface is returned.
 type DefaultConsumer struct {
-	config QueueConfig
-	queue  queueCaller
+	config   QueueConfig
+	queue    queueCaller
+	consumer *consumer
 }
 
 //QueueConfig represents the configuration of the queue, consumer group and topic the consumer interested about.
@@ -48,7 +49,7 @@ func NewConsumer(config QueueConfig) Consumer {
 		topic:  config.Topic,
 		caller: defaultHTTPCaller{config.Queue},
 	}
-	return &DefaultConsumer{config, queue}
+	return &DefaultConsumer{config, queue, nil}
 }
 
 //Consume method periodically checks for new messages determined by the backoff period.
@@ -92,15 +93,24 @@ func (d defaultChMsgListener) OnMessage(m Message) error {
 }
 
 func (c *DefaultConsumer) consume(msgListener MsgListener) (nr int, err error) {
-	cInst, err := c.queue.createConsumerInstance()
-	if err != nil {
-		log.Printf("ERROR - creating consumer instance: %s", err.Error())
-		return 0, err
+	q := c.queue
+	var cInst consumer
+	if c.consumer == nil {
+		cInst, err = q.createConsumerInstance()
+		if err != nil {
+			log.Printf("ERROR - creating consumer instance: %s", err.Error())
+			return 0, err
+		}
+		c.consumer = &cInst
 	}
-
-	msgs, err := c.queue.consumeMessages(cInst)
+	msgs, err := q.consumeMessages(cInst)
 	if err != nil {
 		log.Printf("ERROR - consuming messages: %s", err.Error())
+		c.consumer = nil
+		errD := q.destroyConsumerInstance(cInst)
+		if errD != nil {
+			log.Printf("ERROR - deleting consumer instance: %s", errD.Error())
+		}
 		return 0, err
 	}
 
@@ -108,10 +118,5 @@ func (c *DefaultConsumer) consume(msgListener MsgListener) (nr int, err error) {
 		msgListener.OnMessage(m)
 	}
 
-	err = c.queue.destroyConsumerInstance(cInst)
-	if err != nil {
-		log.Printf("ERROR - deleting consumer instance: %s", err.Error())
-		return 0, err
-	}
 	return len(msgs), nil
 }

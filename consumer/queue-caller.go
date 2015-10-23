@@ -18,11 +18,10 @@ type queueCaller interface {
 }
 
 type defaultQueueCaller struct {
-	addr     string
-	group    string
-	topic    string
-	consumer consumer
-	caller   httpCaller
+	addr   string
+	group  string
+	topic  string
+	caller httpCaller
 }
 
 type httpCaller interface {
