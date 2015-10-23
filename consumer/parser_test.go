@@ -85,7 +85,7 @@ func TestParseMessage(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		actual := parseMessage(test.rawMsg)
+		actual, _ := parseMessage(test.rawMsg)
 		if !reflect.DeepEqual(actual, test.expected) {
 			t.Errorf("\nExpected: %v\nActual: %v", test.expected, actual)
 		}
@@ -111,7 +111,7 @@ func TestParseHeader(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		actual := parseHeaders(test.msg)
+		actual, _ := parseHeaders(test.msg)
 		if !reflect.DeepEqual(actual, test.expected) {
 			t.Errorf("Expected: %v\nActual: %v", test.expected, actual)
 		}
@@ -130,7 +130,7 @@ func TestParseBody(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		actual := parseBody(test.msg)
+		actual, _ := parseBody(test.msg)
 		if actual != test.expected {
 			t.Errorf("Expected: %v\nActual: %v", test.expected, actual)
 		}
