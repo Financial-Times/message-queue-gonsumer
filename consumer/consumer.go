@@ -88,7 +88,7 @@ func (c *Consumer) consume(msgListener MsgListener) (nr int, err error) {
 	}
 
 	for _, m := range msgs {
-		msgListener.OnMessage(m)
+		go msgListener.OnMessage(m)
 	}
 
 	err = c.Queue.destroyConsumerInstance(cInst)
