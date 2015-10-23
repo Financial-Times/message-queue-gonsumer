@@ -12,17 +12,26 @@ type MsgListener interface {
 	OnMessage(msg Message) error
 }
 
+//Consumer is the high-level message consumer interface.
+//Contains the queue config and has two methods to consume messages: an interface and a channel based one: Consume(MsgListener, int) && ConsumeCh(chan<- Message).
 type Consumer interface {
 	Consume(msg MsgListener, backoff int) error
 	ConsumeCh(ch chan<- Message) error
 }
 
-//Consumer is the high-level message consumer struct.
-//Contains the queue config and has two methods to consume messages: an interface and a channel based one: Consume(MsgListener, int) && ConsumeCh(chan<- Message).
-//One creates a *Consumer by Calling the NewConsumer(QueueConfig) function.
+//DefaultConsumer is the de facto implementation of the Consumer interface which is used by the client.
+//By calling the NewConsumer(QueueConfig) function the DefaultConsumer impl of the Consumer interface is returned.
 type DefaultConsumer struct {
 	config QueueConfig
 	queue  queueCaller
+}
+
+//QueueConfig represents the configuration of the queue, consumer group and topic the consumer interested about.
+type QueueConfig struct {
+	Addr  string `json:"address"`
+	Group string `json:"group"`
+	Topic string `json:"topic"`
+	Queue string `json:"queue"`
 }
 
 //Message is the higher-level representation of messages from the queue.
@@ -32,7 +41,6 @@ type Message struct {
 }
 
 //NewConsumer returns a pointer to a freshly created consumer.
-//Read more @ queue-caller.go#QueueConfig.
 func NewConsumer(config QueueConfig) Consumer {
 	queue := defaultQueueCaller{
 		addr:   config.Addr,

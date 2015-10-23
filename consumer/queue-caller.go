@@ -11,14 +11,6 @@ import (
 	"strings"
 )
 
-//QueueConfig represents the configuration of the queue, consumer group and topic the consumer interested about.
-type QueueConfig struct {
-	Addr  string `json:"address"`
-	Group string `json:"group"`
-	Topic string `json:"topic"`
-	Queue string `json:"queue"`
-}
-
 type queueCaller interface {
 	createConsumerInstance() (consumer, error)
 	consumeMessages(c consumer) ([]Message, error)
