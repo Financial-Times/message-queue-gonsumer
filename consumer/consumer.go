@@ -12,11 +12,17 @@ type MsgListener interface {
 	OnMessage(msg Message) error
 }
 
+type Consumer interface {
+	Consume(msg MsgListener, backoff int) error
+	ConsumeCh(ch chan<- Message) error
+}
+
 //Consumer is the high-level message consumer struct.
 //Contains the queue config and has two methods to consume messages: an interface and a channel based one: Consume(MsgListener, int) && ConsumeCh(chan<- Message).
 //One creates a *Consumer by Calling the NewConsumer(QueueConfig) function.
-type Consumer struct {
-	Queue QueueConfig
+type DefaultConsumer struct {
+	config QueueConfig
+	queue  queueCaller
 }
 
 //Message is the higher-level representation of messages from the queue.
@@ -27,16 +33,19 @@ type Message struct {
 
 //NewConsumer returns a pointer to a freshly created consumer.
 //Read more @ queue-caller.go#QueueConfig.
-func NewConsumer(config QueueConfig) *Consumer {
-	if config.caller == nil {
-		config.caller = defaultHTTPCaller{config.Queue}
+func NewConsumer(config QueueConfig) Consumer {
+	queue := defaultQueueCaller{
+		addr:   config.Addr,
+		group:  config.Group,
+		topic:  config.Topic,
+		caller: defaultHTTPCaller{config.Queue},
 	}
-	return &Consumer{config}
+	return &DefaultConsumer{config, queue}
 }
 
 //Consume method periodically checks for new messages determined by the backoff period.
 //It accepts a MsgListener and on receiving new messages it passes them to the listener.
-func (c *Consumer) Consume(msgListener MsgListener, backoff int) (err error) {
+func (c *DefaultConsumer) Consume(msgListener MsgListener, backoff int) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			var ok bool
@@ -61,7 +70,7 @@ const defaultBackoffPeriod = 8
 
 //ConsumeCh method periodically checks for new messages determined by the a default backoff period.
 //It accepts an inbound Message channel, and forwards new messages to this channel.
-func (c *Consumer) ConsumeCh(ch chan<- Message) error {
+func (c *DefaultConsumer) ConsumeCh(ch chan<- Message) error {
 	return c.Consume(defaultChMsgListener{ch}, defaultBackoffPeriod)
 }
 
@@ -74,14 +83,14 @@ func (d defaultChMsgListener) OnMessage(m Message) error {
 	return nil
 }
 
-func (c *Consumer) consume(msgListener MsgListener) (nr int, err error) {
-	cInst, err := c.Queue.createConsumerInstance()
+func (c *DefaultConsumer) consume(msgListener MsgListener) (nr int, err error) {
+	cInst, err := c.queue.createConsumerInstance()
 	if err != nil {
 		log.Printf("ERROR - creating consumer instance: %s", err.Error())
 		return 0, err
 	}
 
-	msgs, err := c.Queue.consumeMessages(cInst)
+	msgs, err := c.queue.consumeMessages(cInst)
 	if err != nil {
 		log.Printf("ERROR - consuming messages: %s", err.Error())
 		return 0, err
@@ -91,7 +100,7 @@ func (c *Consumer) consume(msgListener MsgListener) (nr int, err error) {
 		msgListener.OnMessage(m)
 	}
 
-	err = c.Queue.destroyConsumerInstance(cInst)
+	err = c.queue.destroyConsumerInstance(cInst)
 	if err != nil {
 		log.Printf("ERROR - deleting consumer instance: %s", err.Error())
 		return 0, err
