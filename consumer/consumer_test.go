@@ -7,52 +7,45 @@ import (
 )
 
 func TestConsume(t *testing.T) {
-
 	var tests = []struct {
-		consumer *DefaultConsumer
+		iterator *DefaultIterator
+		expMsgs  []Message
 		expErr   error
-		expNr    int
-		expCons  *consumer //consumerInstance on consumer
+		expCons  *consumer //consumerInstance of DefaultIterator
 	}{
 		{
-			&DefaultConsumer{queue: default_queueCaller{}, consumer: consInst_test},
+			&DefaultIterator{queue: default_queueCaller{}, consumer: consInst_test},
+			msgs_test,
 			nil,
-			5,
 			consInst_test,
 		},
 		{
-			&DefaultConsumer{queue: default_queueCaller{}},
+			&DefaultIterator{queue: default_queueCaller{}},
+			msgs_test,
 			nil,
-			5,
 			consInst_test,
 		},
 		{
-			&DefaultConsumer{queue: consumeMsgError_queueCaller{}, consumer: consInst_test},
+			&DefaultIterator{queue: consumeMsgError_queueCaller{}, consumer: consInst_test},
+			nil,
 			errors.New("Error while consuming"),
-			0,
 			nil,
 		},
 	}
 
 	for _, test := range tests {
-		actNr, actErr := test.consumer.consume(msgListener_test)
-		if actNr != test.expNr || !reflect.DeepEqual(test.consumer.consumer, test.expCons) || !reflect.DeepEqual(test.expErr, actErr) {
-			t.Errorf("Expected: nr: %d, error: %v, consumer: %v\nActual: nr: %d, error: %v consumer: %v.",
-				test.expNr, test.expErr, test.expCons, actNr, actErr, test.consumer.consumer)
+		actMsgs, actErr := test.iterator.consume()
+		if !reflect.DeepEqual(actMsgs, test.expMsgs) || !reflect.DeepEqual(test.iterator.consumer, test.expCons) || !reflect.DeepEqual(test.expErr, actErr) {
+			t.Errorf("Expected: nr: %d, error: %v, iterator: %v\nActual: nr: %d, error: %v iterator: %v.",
+				test.expMsgs, test.expErr, test.expCons, actMsgs, actErr, test.iterator.consumer)
 		}
 	}
 }
 
-type testMsgListener struct{}
-
-func (list testMsgListener) OnMessage(m Message) error {
-	return nil
-}
-
-var msgListener_test = testMsgListener{}
 var consInst_test = &consumer{"/queue/consumergroup/instance-d", "/instance-id"}
+var msgs_test = []Message{Message{nil, "body"}, Message{map[string]string{"Message-Id": "0000-1111-0000-abcd"}, "[]"}}
 
-//test queue caller implementations
+//test queueCaller implementations
 
 //default happy-case behaviour
 type default_queueCaller struct{}
@@ -72,7 +65,7 @@ func (qc default_queueCaller) consumeMessages(cInst consumer) ([]Message, error)
 	if len(cInst.BaseURI) == 0 && len(cInst.InstanceID) == 0 {
 		return nil, errors.New("consumer instance is nil")
 	}
-	return make([]Message, 5), nil
+	return msgs_test, nil
 }
 
 //return error on consume and destroy

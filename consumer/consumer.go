@@ -6,21 +6,16 @@ import (
 	"time"
 )
 
-//MsgListener contains the logic and strategy of consuming Messages.
-//This must be implemented by the clients and passed as a param to the Consume(MsgListener, int) method.
-type MsgListener interface {
-	OnMessage(msg Message) error
+//MessageIterator is the consumer API.
+type MessageIterator interface {
+	//At each call returns the next batch of messages
+	NextMessages() ([]Message, error)
 }
 
-//Consumer is the high-level message consumer interface.
-//Contains the queue config and has two methods to consume messages: an interface and a channel based one: Consume(MsgListener, int) && ConsumeCh(chan<- Message).
-type Consumer interface {
-	Consume(msg MsgListener, backoff int) error
-}
-
-//DefaultConsumer is the de facto implementation of the Consumer interface which is used by the client.
-//By calling the NewConsumer(QueueConfig) function the DefaultConsumer impl of the Consumer interface is returned.
-type DefaultConsumer struct {
+//DefaultIterator is the default implementation of the MessageIterator interface.
+//Calling the NewIterator(QueueConfig) a new instance of DefaultIterator is returned.
+//NOTE: DefaultIterator is not thread-safe! If you call NextMessages() from different go routines concurrently, you doing it wrong.
+type DefaultIterator struct {
 	config   QueueConfig
 	queue    queueCaller
 	consumer *consumer
@@ -40,20 +35,21 @@ type Message struct {
 	Body    string
 }
 
-//NewConsumer returns a pointer to a freshly created consumer.
-func NewConsumer(config QueueConfig) Consumer {
+//NewIterator returns a pointer to a freshly created DefaultIterator.
+func NewIterator(config QueueConfig) MessageIterator {
 	queue := defaultQueueCaller{
 		addr:   config.Addr,
 		group:  config.Group,
 		topic:  config.Topic,
 		caller: defaultHTTPCaller{config.Queue},
 	}
-	return &DefaultConsumer{config, queue, nil}
+	return &DefaultIterator{config, queue, nil}
 }
 
-//Consume method periodically checks for new messages determined by the backoff period.
-//It accepts a MsgListener and on receiving new messages it passes them to the listener.
-func (c *DefaultConsumer) Consume(msgListener MsgListener, backoff int) (err error) {
+const backoffPeriod = 8
+
+//Returns the next batch of messages from the queue.
+func (c *DefaultIterator) NextMessages() (msgs []Message, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			var ok bool
@@ -63,25 +59,19 @@ func (c *DefaultConsumer) Consume(msgListener MsgListener, backoff int) (err err
 			}
 		}
 	}()
-
-	for {
-		nr, err := c.consume(msgListener)
-		if err != nil || nr == 0 {
-			time.Sleep(time.Duration(backoff) * time.Second)
-		}
-
-	}
-	return nil
+	msgs, err = c.consume()
+	time.Sleep(time.Duration(backoffPeriod) * time.Second)
+	return msgs, err
 }
 
-func (c *DefaultConsumer) consume(msgListener MsgListener) (nr int, err error) {
+func (c *DefaultIterator) consume() ([]Message, error) {
 	q := c.queue
 	var cInst consumer
 	if c.consumer == nil {
-		cInst, err = q.createConsumerInstance()
+		cInst, err := q.createConsumerInstance()
 		if err != nil {
 			log.Printf("ERROR - creating consumer instance: %s", err.Error())
-			return 0, err
+			return nil, err
 		}
 		c.consumer = &cInst
 	}
@@ -94,11 +84,7 @@ func (c *DefaultConsumer) consume(msgListener MsgListener) (nr int, err error) {
 		if errD != nil {
 			log.Printf("ERROR - deleting consumer instance: %s", errD.Error())
 		}
-		return 0, err
+		return nil, err
 	}
-	for _, m := range msgs {
-		msgListener.OnMessage(m)
-	}
-
-	return len(msgs), nil
+	return msgs, nil
 }
