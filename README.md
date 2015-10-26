@@ -7,29 +7,33 @@ Usage:
 `import github.com/Financial-Times/message-queue-gonsumer/consumer`
 
 
-There are two ways to use the API:
+###Usage
 
-1. `consumer.Consume(MsgListener, backoffPeriod)`: clients must provide an implementation for the MsgListener
-2. `consumer.ConsumeCh(chan<- Message)`: clients receive messages from the provided channel
+The consumer API is like an iterator. First, the client creates a MessageIterator by calling:
+
+ `consumer.NewIterator(QueueConf)`
+
+Then whenever it is ready to consume new batch of messages, calls:
+
+ `iterator.NextMessages()`
+
+Which returns a slice of messages.
 
 
 ```go
-//implement consumer.MsgListener interface
-type listenerImpl struct {}
-func (l listenerImpl) OnMessage(m Message) error {
-  //... process msg
-}
-
 conf := QueueConfig{
   Addr: "<addr>",
   Group: "<group>",
   Topic: "<topic>",
   Queue: "<required in co-co>",
 }
-myConsumer := consumer.NewConsumer(conf)
+myIterator := consumer.NewIterator(conf)
 
-listener := listenerImpl{}
-myConsumer.Consume(listener}, 8)
+for {
+  msgs, err := myIterator.NextMessages()
+  //process msgs
+}
+
 ```
 
 ###ToDo
