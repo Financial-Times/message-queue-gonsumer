@@ -66,7 +66,6 @@ func (c *DefaultIterator) NextMessages() (msgs []Message, err error) {
 
 func (c *DefaultIterator) consume() ([]Message, error) {
 	q := c.queue
-	var cInst consumer
 	if c.consumer == nil {
 		cInst, err := q.createConsumerInstance()
 		if err != nil {
@@ -78,7 +77,7 @@ func (c *DefaultIterator) consume() ([]Message, error) {
 	msgs, err := q.consumeMessages(*c.consumer)
 	if err != nil {
 		log.Printf("ERROR - consuming messages: %s", err.Error())
-		cInst = *c.consumer
+		cInst := *c.consumer
 		c.consumer = nil
 		errD := q.destroyConsumerInstance(cInst)
 		if errD != nil {
