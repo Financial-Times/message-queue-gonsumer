@@ -36,9 +36,9 @@ func TestConsume(t *testing.T) {
 
 	for _, test := range tests {
 		actNr, actErr := test.consumer.consume(msgListener_test)
-		if actNr != test.expNr || !reflect.DeepEqual(test.consumer.consumer, test.expCons) ||
-			(actErr != test.expErr && actErr.Error() != test.expErr.Error()) {
-			t.Errorf("Expected: nr: %d, error: %v, consumer: %v\nActual: nr: %d, error: %v consumer: %v.", test.expNr, test.expErr, test.expCons, actNr, actErr, test.consumer.consumer)
+		if actNr != test.expNr || !reflect.DeepEqual(test.consumer.consumer, test.expCons) || !reflect.DeepEqual(test.expErr, actErr) {
+			t.Errorf("Expected: nr: %d, error: %v, consumer: %v\nActual: nr: %d, error: %v consumer: %v.",
+				test.expNr, test.expErr, test.expCons, actNr, actErr, test.consumer.consumer)
 		}
 	}
 }
