@@ -48,7 +48,7 @@ func NewIterator(config QueueConfig) MessageIterator {
 
 const backoffPeriod = 8
 
-//Returns the next batch of messages from the queue.
+//NextMessages returns the next batch of messages from the queue.
 func (c *DefaultIterator) NextMessages() (msgs []Message, err error) {
 	defer func() {
 		if r := recover(); r != nil {
