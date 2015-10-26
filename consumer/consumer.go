@@ -16,7 +16,6 @@ type MsgListener interface {
 //Contains the queue config and has two methods to consume messages: an interface and a channel based one: Consume(MsgListener, int) && ConsumeCh(chan<- Message).
 type Consumer interface {
 	Consume(msg MsgListener, backoff int) error
-	ConsumeCh(ch chan<- Message) error
 }
 
 //DefaultConsumer is the de facto implementation of the Consumer interface which is used by the client.
@@ -72,23 +71,6 @@ func (c *DefaultConsumer) Consume(msgListener MsgListener, backoff int) (err err
 		}
 
 	}
-	return nil
-}
-
-const defaultBackoffPeriod = 8
-
-//ConsumeCh method periodically checks for new messages determined by the a default backoff period.
-//It accepts an inbound Message channel, and forwards new messages to this channel.
-func (c *DefaultConsumer) ConsumeCh(ch chan<- Message) error {
-	return c.Consume(defaultChMsgListener{ch}, defaultBackoffPeriod)
-}
-
-type defaultChMsgListener struct {
-	ch chan<- Message
-}
-
-func (d defaultChMsgListener) OnMessage(m Message) error {
-	d.ch <- m
 	return nil
 }
 
