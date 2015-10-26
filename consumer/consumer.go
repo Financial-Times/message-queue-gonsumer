@@ -103,9 +103,10 @@ func (c *DefaultConsumer) consume(msgListener MsgListener) (nr int, err error) {
 		}
 		c.consumer = &cInst
 	}
-	msgs, err := q.consumeMessages(cInst)
+	msgs, err := q.consumeMessages(*c.consumer)
 	if err != nil {
 		log.Printf("ERROR - consuming messages: %s", err.Error())
+		cInst = *c.consumer
 		c.consumer = nil
 		errD := q.destroyConsumerInstance(cInst)
 		if errD != nil {
@@ -113,7 +114,6 @@ func (c *DefaultConsumer) consume(msgListener MsgListener) (nr int, err error) {
 		}
 		return 0, err
 	}
-
 	for _, m := range msgs {
 		msgListener.OnMessage(m)
 	}
