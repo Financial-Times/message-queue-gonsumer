@@ -3,7 +3,6 @@ package consumer
 import (
 	"fmt"
 	"log"
-	"net/http"
 	"time"
 )
 
@@ -42,7 +41,7 @@ func NewIterator(config QueueConfig) MessageIterator {
 		addr:   config.Addr,
 		group:  config.Group,
 		topic:  config.Topic,
-		caller: defaultHTTPCaller{config.Queue, http.Client{}},
+		caller: defaultHTTPCaller{host: config.Queue},
 	}
 	return &DefaultIterator{config, queue, nil}
 }
