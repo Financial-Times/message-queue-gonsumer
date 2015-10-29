@@ -79,12 +79,11 @@ func (q defaultQueueCaller) buildConsumerURL(c consumer) (uri *url.URL, err erro
 }
 
 type defaultHTTPCaller struct {
-	host string
+	host   string
+	client http.Client
 }
 
-func (p defaultHTTPCaller) DoReq(method, url string, body io.Reader, headers map[string]string, expectedStatus int) (data []byte, err error) {
-	client := http.Client{}
-
+func (caller defaultHTTPCaller) DoReq(method, url string, body io.Reader, headers map[string]string, expectedStatus int) (data []byte, err error) {
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		log.Printf("ERROR - creating request: %s", err.Error())
@@ -94,11 +93,11 @@ func (p defaultHTTPCaller) DoReq(method, url string, body io.Reader, headers map
 	for k, v := range headers {
 		req.Header.Add(k, v)
 	}
-	if len(p.host) > 0 {
-		req.Host = p.host
+	if len(caller.host) > 0 {
+		req.Host = caller.host
 	}
 
-	resp, err := client.Do(req)
+	resp, err := caller.client.Do(req)
 	if err != nil {
 		log.Printf("ERROR - executing request: %s", err.Error())
 		return
