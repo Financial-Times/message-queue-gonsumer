@@ -3,6 +3,7 @@ package consumer
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"time"
 )
 
@@ -23,9 +24,12 @@ type DefaultIterator struct {
 
 //QueueConfig represents the configuration of the queue, consumer group and topic the consumer interested about.
 type QueueConfig struct {
-	Addr  string `json:"address"`
-	Group string `json:"group"`
-	Topic string `json:"topic"`
+	//list of queue addresses.
+	Addrs []string `json:"address"`
+	Group string   `json:"group"`
+	Topic string   `json:"topic"`
+	//the name of the queue
+	//leave it empty for requests to UCS kafka-proxy
 	Queue string `json:"queue"`
 }
 
@@ -37,11 +41,11 @@ type Message struct {
 
 //NewIterator returns a pointer to a freshly created DefaultIterator.
 func NewIterator(config QueueConfig) MessageIterator {
-	queue := defaultQueueCaller{
-		addr:   config.Addr,
+	queue := &defaultQueueCaller{
+		addrs:  config.Addrs,
 		group:  config.Group,
 		topic:  config.Topic,
-		caller: defaultHTTPCaller{config.Queue},
+		caller: defaultHTTPCaller{config.Queue, http.Client{}},
 	}
 	return &DefaultIterator{config, queue, nil}
 }
