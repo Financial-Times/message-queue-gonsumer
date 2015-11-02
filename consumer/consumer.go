@@ -31,6 +31,7 @@ type QueueConfig struct {
 	//the name of the queue
 	//leave it empty for requests to UCS kafka-proxy
 	Queue string `json:"queue"`
+	AuthorizationKey string
 }
 
 //Message is the higher-level representation of messages from the queue.
@@ -45,7 +46,7 @@ func NewIterator(config QueueConfig) MessageIterator {
 		addrs:  config.Addrs,
 		group:  config.Group,
 		topic:  config.Topic,
-		caller: defaultHTTPCaller{config.Queue, http.Client{}},
+		caller: defaultHTTPCaller{config.AuthorizationKey, config.Queue, http.Client{}},
 	}
 	return &DefaultIterator{config, queue, nil}
 }
