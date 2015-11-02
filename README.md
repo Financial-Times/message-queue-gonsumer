@@ -26,6 +26,7 @@ conf := QueueConfig{
   Group: "<group>",
   Topic: "<topic>",
   Queue: "<required in co-co>",
+  AuthorizationKey: "<required from AWS to UCS>",
 }
 myIterator := consumer.NewIterator(conf)
 
