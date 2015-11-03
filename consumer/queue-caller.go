@@ -92,7 +92,7 @@ type defaultHTTPCaller struct {
 	client           http.Client
 }
 
-func (p defaultHTTPCaller) DoReq(method, url string, body io.Reader, headers map[string]string, expectedStatus int) (data []byte, err error) {
+func (caller defaultHTTPCaller) DoReq(method, url string, body io.Reader, headers map[string]string, expectedStatus int) (data []byte, err error) {
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		log.Printf("ERROR - creating request: %s", err.Error())
@@ -102,15 +102,15 @@ func (p defaultHTTPCaller) DoReq(method, url string, body io.Reader, headers map
 	for k, v := range headers {
 		req.Header.Add(k, v)
 	}
-	if len(p.hostHeader) > 0 {
-		req.Host = p.hostHeader
+	if len(caller.hostHeader) > 0 {
+		req.Host = caller.hostHeader
 	}
 
-	if len(p.authorizationKey) > 0 {
-		req.Header.Add("Authorization", p.authorizationKey)
+	if len(caller.authorizationKey) > 0 {
+		req.Header.Add("Authorization", caller.authorizationKey)
 	}
 
-	resp, err := p.client.Do(req)
+	resp, err := caller.client.Do(req)
 	if err != nil {
 		log.Printf("ERROR - executing request: %s", err.Error())
 		return
