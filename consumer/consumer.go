@@ -30,7 +30,7 @@ type QueueConfig struct {
 	Topic string   `json:"topic"`
 	//the name of the queue
 	//leave it empty for requests to UCS kafka-proxy
-	Queue string `json:"queue"`
+	Queue            string `json:"queue"`
 	AuthorizationKey string
 }
 
@@ -46,7 +46,7 @@ func NewIterator(config QueueConfig) MessageIterator {
 		addrs:  config.Addrs,
 		group:  config.Group,
 		topic:  config.Topic,
-		caller: defaultHTTPCaller{config.AuthorizationKey, config.Queue, http.Client{}},
+		caller: defaultHTTPCaller{config.Queue, config.AuthorizationKey, http.Client{}},
 	}
 	return &DefaultIterator{config, queue, nil}
 }
