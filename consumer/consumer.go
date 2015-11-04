@@ -65,7 +65,9 @@ func (c *DefaultIterator) NextMessages() (msgs []Message, err error) {
 		}
 	}()
 	msgs, err = c.consume()
-	time.Sleep(time.Duration(backoffPeriod) * time.Second)
+	if err != nil || len(msgs) == 0 {
+		time.Sleep(time.Duration(backoffPeriod) * time.Second)
+	}
 	return msgs, err
 }
 
