@@ -1,13 +1,15 @@
+#message-queue-gonsumer
+
+[![GoDoc](https://godoc.org/github.com/Financial-Times/message-queue-gonsumer/consumer?status.svg)](https://godoc.org/github.com/Financial-Times/message-queue-gonsumer/consumer)
+[![Circle CI](https://circleci.com/gh/Financial-Times/message-queue-gonsumer.svg?style=shield)]
+
 Go implementation of https://github.com/Financial-Times/message-queue-consumer library
 
-Usage:
+###Usage
 
 `go get github.com/Financial-Times/message-queue-gonsumer/consumer`
 
 `import github.com/Financial-Times/message-queue-gonsumer/consumer`
-
-
-###Usage
 
 The consumer API is like an iterator. First, the client creates a MessageIterator by calling:
 
