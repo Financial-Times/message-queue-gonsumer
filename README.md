@@ -29,6 +29,7 @@ conf := QueueConfig{
   Group: "<group>",
   Topic: "<topic>",
   Queue: "<required in co-co>",
+  Offset "<set to `largest` otherwise the default `smallest` will be considered>",
   AuthorizationKey: "<required from AWS to UCS>",
 }
 myIterator := consumer.NewIterator(conf)
