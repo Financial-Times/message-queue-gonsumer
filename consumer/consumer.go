@@ -25,12 +25,13 @@ type DefaultIterator struct {
 //QueueConfig represents the configuration of the queue, consumer group and topic the consumer interested about.
 type QueueConfig struct {
 	//list of queue addresses.
-	Addrs []string `json:"address"`
-	Group string   `json:"group"`
-	Topic string   `json:"topic"`
+	Addrs            []string `json:"address"`
+	Group            string   `json:"group"`
+	Topic            string   `json:"topic"`
 	//the name of the queue
 	//leave it empty for requests to UCS kafka-proxy
 	Queue            string `json:"queue"`
+	Offset           string `json:"offset"`
 	AuthorizationKey string
 }
 
@@ -42,10 +43,15 @@ type Message struct {
 
 //NewIterator returns a pointer to a freshly created DefaultIterator.
 func NewIterator(config QueueConfig) MessageIterator {
+	offset := "smallest"
+	if len(config.Offset) > 0 {
+		offset = config.Offset;
+	}
 	queue := &defaultQueueCaller{
 		addrs:  config.Addrs,
 		group:  config.Group,
 		topic:  config.Topic,
+		offset: offset,
 		caller: defaultHTTPCaller{config.Queue, config.AuthorizationKey, http.Client{}},
 	}
 	return &DefaultIterator{config, queue, nil}

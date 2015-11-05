@@ -20,12 +20,13 @@ type queueCaller interface {
 type defaultQueueCaller struct {
 	//pool of queue addresses
 	//the active address is changed in a round-robin fashion before each new consumer instance creation
-	addrs []string
+	addrs   []string
 	//used queue addr
 	//this gets 'incremented modulo' at each createConsumerInstance() call
 	addrInd int
 	group   string
 	topic   string
+	offset	string
 	caller  httpCaller
 }
 
@@ -38,12 +39,12 @@ type consumer struct {
 	InstanceID string `json:",instance_id"`
 }
 
-const createConsumerReq = `{"auto.offset.reset": "smallest", "auto.commit.enable": "true"}`
-
 func (q *defaultQueueCaller) createConsumerInstance() (c consumer, err error) {
 	q.addrInd = (q.addrInd + 1) % len(q.addrs)
 	addr := q.addrs[q.addrInd]
-	data, err := q.caller.DoReq("POST", addr+"/consumers/"+q.group, strings.NewReader(createConsumerReq), map[string]string{"Content-Type": "application/json"}, http.StatusOK)
+
+	createConsumerReq := `{"auto.offset.reset": "` + q.offset + `", "auto.commit.enable": "true"}`
+	data, err := q.caller.DoReq("POST", addr + "/consumers/" + q.group, strings.NewReader(createConsumerReq), map[string]string{"Content-Type": "application/json"}, http.StatusOK)
 	if err != nil {
 		return
 	}
