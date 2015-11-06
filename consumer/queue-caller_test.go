@@ -15,10 +15,10 @@ func TestBuildConsumerURL(t *testing.T) {
 		{
 			testConsumer,
 			defaultQueueCaller{
-				addrs:   []string{"http://localhost:8080"},
+				addrs:   []string{"https://localhost:8080"},
 				addrInd: 0,
 			},
-			"http://localhost:8080/consumers/zoli/instances/rest-consumer-1-45864",
+			"https://localhost:8080/consumers/zoli/instances/rest-consumer-1-45864",
 		},
 		{
 			testConsumer,

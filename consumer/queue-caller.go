@@ -84,6 +84,7 @@ func (q *defaultQueueCaller) buildConsumerURL(c consumer) (uri *url.URL, err err
 		log.Printf("ERROR - parsing Addr: %s", err.Error())
 	}
 	uri.Host = addrURL.Host
+	uri.Scheme = addrURL.Scheme
 	return uri, err
 }
 
