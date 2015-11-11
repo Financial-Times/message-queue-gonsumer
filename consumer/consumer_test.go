@@ -3,6 +3,7 @@ package consumer
 import (
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -28,14 +29,16 @@ func TestConsume(t *testing.T) {
 		{
 			&DefaultIterator{queue: consumeMsgErrorQueueCaller{}, consumer: consInstTest},
 			nil,
-			errors.New("Error while consuming"),
+			errors.New("Error consuming messages"),
 			nil,
 		},
 	}
 
 	for _, test := range tests {
 		actMsgs, actErr := test.iterator.consume()
-		if !reflect.DeepEqual(actMsgs, test.expMsgs) || !reflect.DeepEqual(test.iterator.consumer, test.expCons) || !reflect.DeepEqual(test.expErr, actErr) {
+		if !reflect.DeepEqual(actMsgs, test.expMsgs) ||
+			!reflect.DeepEqual(test.iterator.consumer, test.expCons) ||
+			(test.expErr != nil && !strings.Contains(actErr.Error(), test.expErr.Error())) {
 			t.Errorf("Expected: msgs: %v, error: %v, consumer: %v\nActual: msgs: %v, error: %v consumer: %v.",
 				test.expMsgs, test.expErr, test.expCons, actMsgs, actErr, test.iterator.consumer)
 		}
