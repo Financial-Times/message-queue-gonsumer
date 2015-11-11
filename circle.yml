@@ -1,2 +1,10 @@
 general:
   build_dir: consumer
+dependencies:
+  pre:
+    - sudo rm -rf /usr/local/go; wget https://storage.googleapis.com/golang/go1.5.linux-amd64.tar.gz; sudo tar -C /usr/local -xzf go1.5.linux-amd64.tar.gz; export GOROOT=/usr/local/go; export PATH=$GOROOT/bin:$PATH; go get github.com/axw/gocov/gocov; go get github.com/matm/gocov-html;
+test:
+  override:
+    - gocov test > coverage.json
+  post:
+    - gocov-html coverage.json > $CIRCLE_ARTIFACTS/coverage.html
