@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 )
@@ -20,16 +19,14 @@ func parseResponse(data []byte) ([]Message, error) {
 	var resp []message
 	err := json.Unmarshal(data, &resp)
 	if err != nil {
-		log.Printf("ERROR - parsing json message %q failed with error %v", data, err.Error())
 		return nil, err
 	}
 	var msgs []Message
 	for _, m := range resp {
-		//log.Printf("DEBUG - parsing msg of partition %d and offset %d", m.Partition, m.Offset)
 		if msg, err := parseMessage(m.Value); err == nil {
 			msgs = append(msgs, msg)
 		} else {
-			log.Printf("ERROR - parsing message %v", err.Error())
+			warnLogger.Printf("Error while parsing message: partition [%d], offset [%d]. Cause: [%v]. Skipping.", m.Partition, m.Offset, err)
 		}
 	}
 	return msgs, nil
@@ -38,7 +35,8 @@ func parseResponse(data []byte) ([]Message, error) {
 func parseMessage(raw string) (m Message, err error) {
 	decoded, err := base64.StdEncoding.DecodeString(raw)
 	if err != nil {
-		log.Printf("ERROR - failure in decoding base64 value: %s", err.Error())
+		wrappedErr := fmt.Errorf("Error in decoding base64 value: [%v]", err)
+		err = wrappedErr
 		return
 	}
 	if m.Headers, err = parseHeaders(string(decoded[:])); err != nil {
@@ -59,7 +57,7 @@ func parseHeaders(msg string) (map[string]string, error) {
 	//naive
 	i := strings.Index(msg, "{")
 	if i == -1 {
-		return nil, fmt.Errorf("Cannot parse headers: cannot find '{' character. Message: %s", msg)
+		return nil, fmt.Errorf("Cannot parse headers: cannot find '{' character. Message: [%s]", msg)
 	}
 	headerLines := re.FindAllString(msg[:i], -1)
 
@@ -81,7 +79,7 @@ func parseBody(msg string) (string, error) {
 	f := strings.Index(msg, "{")
 	l := strings.LastIndex(msg, "}")
 	if f == -1 || l == -1 {
-		return "", fmt.Errorf("Cannot parse body: cannot find '{' or '}' characters. Message: %s", msg)
+		return "", fmt.Errorf("Cannot parse body: cannot find '{' or '}' characters. Message: [%s]", msg)
 	}
 	return msg[f : l+1], nil
 }

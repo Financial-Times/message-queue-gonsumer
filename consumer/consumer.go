@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -25,9 +26,9 @@ type DefaultIterator struct {
 //QueueConfig represents the configuration of the queue, consumer group and topic the consumer interested about.
 type QueueConfig struct {
 	//list of queue addresses.
-	Addrs            []string `json:"address"`
-	Group            string   `json:"group"`
-	Topic            string   `json:"topic"`
+	Addrs []string `json:"address"`
+	Group string   `json:"group"`
+	Topic string   `json:"topic"`
 	//the name of the queue
 	//leave it empty for requests to UCS kafka-proxy
 	Queue            string `json:"queue"`
@@ -45,7 +46,7 @@ type Message struct {
 func NewIterator(config QueueConfig) MessageIterator {
 	offset := "smallest"
 	if len(config.Offset) > 0 {
-		offset = config.Offset;
+		offset = config.Offset
 	}
 	queue := &defaultQueueCaller{
 		addrs:  config.Addrs,
@@ -57,6 +58,15 @@ func NewIterator(config QueueConfig) MessageIterator {
 	return &DefaultIterator{config, queue, nil}
 }
 
+const dateLayout = "2006-01-02T15:04:05.000Z"
+const logPattern = log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile | log.LUTC
+
+var warnLogger *log.Logger
+
+func init() {
+	warnLogger = log.New(os.Stdout, "WARN  - ", logPattern)
+}
+
 const backoffPeriod = 8
 
 //NextMessages returns the next batch of messages from the queue.
@@ -66,7 +76,7 @@ func (c *DefaultIterator) NextMessages() (msgs []Message, err error) {
 			var ok bool
 			err, ok = r.(error)
 			if !ok {
-				err = fmt.Errorf("Error: recovered from panic: %v", r)
+				err = fmt.Errorf("Error: recovered from panic: [%v]", r)
 			}
 		}
 	}()
@@ -82,19 +92,19 @@ func (c *DefaultIterator) consume() ([]Message, error) {
 	if c.consumer == nil {
 		cInst, err := q.createConsumerInstance()
 		if err != nil {
-			log.Printf("ERROR - creating consumer instance: %s", err.Error())
+			err = fmt.Errorf("Error creating consumer instance: [%v]", err)
 			return nil, err
 		}
 		c.consumer = &cInst
 	}
 	msgs, err := q.consumeMessages(*c.consumer)
 	if err != nil {
-		log.Printf("ERROR - consuming messages: %s", err.Error())
+		err = fmt.Errorf("Error consuming messages: [%v]", err)
 		cInst := *c.consumer
 		c.consumer = nil
 		errD := q.destroyConsumerInstance(cInst)
 		if errD != nil {
-			log.Printf("ERROR - deleting consumer instance: %s", errD.Error())
+			err = fmt.Errorf("%v. Also error deleting consumer instance: [%v]", err, errD)
 		}
 		return nil, err
 	}

@@ -1,2 +1,9 @@
-general:
+--- 
+dependencies: 
+  pre: 
+    - "sudo rm -rf /usr/local/go; wget https://storage.googleapis.com/golang/go1.5.linux-amd64.tar.gz; sudo tar -C /usr/local -xzf go1.5.linux-amd64.tar.gz; export GOROOT=/usr/local/go; export PATH=$GOROOT/bin:$PATH"
+general: 
   build_dir: consumer
+test: 
+  override: 
+    - "go test -cover"

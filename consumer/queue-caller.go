@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -20,13 +19,13 @@ type queueCaller interface {
 type defaultQueueCaller struct {
 	//pool of queue addresses
 	//the active address is changed in a round-robin fashion before each new consumer instance creation
-	addrs   []string
+	addrs []string
 	//used queue addr
 	//this gets 'incremented modulo' at each createConsumerInstance() call
 	addrInd int
 	group   string
 	topic   string
-	offset	string
+	offset  string
 	caller  httpCaller
 }
 
@@ -44,13 +43,13 @@ func (q *defaultQueueCaller) createConsumerInstance() (c consumer, err error) {
 	addr := q.addrs[q.addrInd]
 
 	createConsumerReq := `{"auto.offset.reset": "` + q.offset + `", "auto.commit.enable": "true"}`
-	data, err := q.caller.DoReq("POST", addr + "/consumers/" + q.group, strings.NewReader(createConsumerReq), map[string]string{"Content-Type": "application/json"}, http.StatusOK)
+	data, err := q.caller.DoReq("POST", addr+"/consumers/"+q.group, strings.NewReader(createConsumerReq), map[string]string{"Content-Type": "application/json"}, http.StatusOK)
 	if err != nil {
 		return
 	}
 	err = json.Unmarshal(data, &c)
 	if err != nil {
-		log.Printf("ERROR - unmarshalling json content: %s", err.Error())
+		err = fmt.Errorf("Unmarshalling json content: [%v]", err)
 		return
 	}
 	return
@@ -75,13 +74,14 @@ func (q *defaultQueueCaller) consumeMessages(c consumer) ([]Message, error) {
 func (q *defaultQueueCaller) buildConsumerURL(c consumer) (uri *url.URL, err error) {
 	uri, err = url.Parse(c.BaseURI)
 	if err != nil {
-		log.Printf("ERROR - parsing base URI: %s", err.Error())
+		err = fmt.Errorf("Parsing base URI: [%v]", err)
 		return
 	}
 	addr := q.addrs[q.addrInd]
 	addrURL, err := url.Parse(addr)
 	if err != nil {
-		log.Printf("ERROR - parsing Addr: %s", err.Error())
+		err = fmt.Errorf("Parsing addr: [%v]", err)
+		return
 	}
 	uri.Host = addrURL.Host
 	uri.Scheme = addrURL.Scheme
@@ -97,7 +97,7 @@ type defaultHTTPCaller struct {
 func (caller defaultHTTPCaller) DoReq(method, url string, body io.Reader, headers map[string]string, expectedStatus int) (data []byte, err error) {
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
-		log.Printf("ERROR - creating request: %s", err.Error())
+		err = fmt.Errorf("Error creating request: [%v]", err)
 		return
 	}
 
@@ -114,14 +114,13 @@ func (caller defaultHTTPCaller) DoReq(method, url string, body io.Reader, header
 
 	resp, err := caller.client.Do(req)
 	if err != nil {
-		log.Printf("ERROR - executing request: %s", err.Error())
+		err = fmt.Errorf("Error executing request: [%v]", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != expectedStatus {
 		err = fmt.Errorf("Unexpected response status %d. Expected: %d.", resp.StatusCode, expectedStatus)
-		log.Printf("ERROR - %s", err.Error())
 		return
 	}
 
