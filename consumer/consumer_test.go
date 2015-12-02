@@ -68,6 +68,13 @@ func (qc defaultTestQueueCaller) consumeMessages(cInst consumer) ([]Message, err
 	return msgsTest, nil
 }
 
+func (qc defaultTestQueueCaller) commitOffsets(cInst consumer) error {
+	if len(cInst.BaseURI) == 0 && len(cInst.InstanceID) == 0 {
+		return errors.New("consumer instance is nil")
+	}
+	return nil
+}
+
 //return error on consume and destroy
 type consumeMsgErrorQueueCaller struct {
 	qc defaultTestQueueCaller
@@ -83,4 +90,8 @@ func (qc consumeMsgErrorQueueCaller) destroyConsumerInstance(cInst consumer) err
 
 func (qc consumeMsgErrorQueueCaller) consumeMessages(cInst consumer) ([]Message, error) {
 	return nil, errors.New("Error while consuming")
+}
+
+func (qc consumeMsgErrorQueueCaller) commitOffsets(cInst consumer) error {
+	return errors.New("Error while commiting offsets")
 }

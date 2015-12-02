@@ -15,18 +15,19 @@ type queueCaller interface {
 	createConsumerInstance() (consumer, error)
 	consumeMessages(c consumer) ([]Message, error)
 	destroyConsumerInstance(c consumer) error
+	commitOffsets(c consumer) error
 }
 
 type defaultQueueCaller struct {
 	//pool of queue addresses
 	//the active address is changed in a round-robin fashion before each new consumer instance creation
-	addrs   []string
+	addrs []string
 	//used queue addr
 	//this gets 'incremented modulo' at each createConsumerInstance() call
 	addrInd int
 	group   string
 	topic   string
-	offset	string
+	offset  string
 	caller  httpCaller
 }
 
@@ -34,17 +35,12 @@ type httpCaller interface {
 	DoReq(method, addr string, body io.Reader, headers map[string]string, expectedStatus int) ([]byte, error)
 }
 
-type consumer struct {
-	BaseURI    string `json:"base_uri"`
-	InstanceID string `json:",instance_id"`
-}
-
 func (q *defaultQueueCaller) createConsumerInstance() (c consumer, err error) {
 	q.addrInd = (q.addrInd + 1) % len(q.addrs)
 	addr := q.addrs[q.addrInd]
 
-	createConsumerReq := `{"auto.offset.reset": "` + q.offset + `", "auto.commit.enable": "true"}`
-	data, err := q.caller.DoReq("POST", addr + "/consumers/" + q.group, strings.NewReader(createConsumerReq), map[string]string{"Content-Type": "application/json"}, http.StatusOK)
+	createConsumerReq := `{"auto.offset.reset": "` + q.offset + `", "auto.commit.enable": "false"}`
+	data, err := q.caller.DoReq("POST", addr+"/consumers/"+q.group, strings.NewReader(createConsumerReq), map[string]string{"Content-Type": "application/json"}, http.StatusOK)
 	if err != nil {
 		return
 	}
@@ -70,6 +66,13 @@ func (q *defaultQueueCaller) consumeMessages(c consumer) ([]Message, error) {
 		return nil, err
 	}
 	return parseResponse(data)
+}
+
+func (q *defaultQueueCaller) commitOffsets(c consumer) (err error) {
+	url, _ := q.buildConsumerURL(c)
+	url.Path = strings.TrimRight(url.Path, "/") + "/offsets"
+	_, err = q.caller.DoReq("POST", url.String(), nil, nil, http.StatusOK)
+	return
 }
 
 func (q *defaultQueueCaller) buildConsumerURL(c consumer) (uri *url.URL, err error) {

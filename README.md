@@ -12,16 +12,11 @@ Go implementation of https://github.com/Financial-Times/message-queue-consumer l
 
 `import github.com/Financial-Times/message-queue-gonsumer/consumer`
 
-The consumer API is like an iterator. First, the client creates a MessageIterator by calling:
+The consumer API is used by calling:
 
- `consumer.NewIterator(QueueConf)`
+ `consumer.Start(QueueConf, func (message Message), httpClient)`
 
-Then whenever it is ready to consume new batch of messages, calls:
-
- `iterator.NextMessages()`
-
-Which returns a slice of messages.
-
+According the QueConf it will start consuming messages on one or more streams and call the passed in function for every message. Make sure the function you pass in is thread safe.
 
 ```go
 conf := QueueConfig{
@@ -29,15 +24,12 @@ conf := QueueConfig{
   Group: "<group>",
   Topic: "<topic>",
   Queue: "<required in co-co>",
-  Offset "<set to `largest` otherwise the default `smallest` will be considered>",
+  Offset: "<set to `smallest` otherwise the default `largest` will be considered>",
+  BackoffPeriod: "<Period in second to back off if error occured or queue is empty>",
+  StreamCount: "<Number of goroutines used to consume/process messages. Defaults to 1>",
   AuthorizationKey: "<required from AWS to UCS>",
 }
-myIterator := consumer.NewIterator(conf)
-
-for {
-  msgs, err := myIterator.NextMessages()
-  //process msgs
-}
+queueConsumer.Start(conf, func(m queueConsumer.Message) { //process message in a thread safe manner }, http.Client{})
 
 ```
 
