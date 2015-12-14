@@ -3,45 +3,51 @@ package consumer
 import (
 	"log"
 	"net/http"
-	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 )
 
-//This function is the entry point to using the gonsumer library
-//It is a blocking function, it will return only when SIGINT or SIGTERM is received. If you don't want to block start it in a different goroutine.
-func Start(config QueueConfig, handler func(m Message), client http.Client) {
+type Consumer struct {
+	streamCount int
+	consumers   []QueueConsumer
+}
+
+func NewConsumer(config QueueConfig, handler func(m Message), client http.Client) Consumer {
 	streamCount := 1
 	if config.StreamCount > 0 {
 		streamCount = config.StreamCount
 	}
-	var wg sync.WaitGroup
-	wg.Add(streamCount)
+	consumers := make([]QueueConsumer, streamCount)
 	for i := 0; i < streamCount; i++ {
-		go func() {
-			defer wg.Done()
-			ch := make(chan os.Signal, 1)
-			signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
-			qc := NewQueueConsumer(config, handler, client)
-			for {
-				select {
-				case <-ch:
-					qc.shutdown()
-					return
-				default:
-					qc.consumeAndHandleMessages()
+		consumers[i] = NewQueueConsumer(config, handler, client)
+	}
 
-				}
-			}
-		}()
+	return Consumer{streamCount, consumers}
+}
+
+//This function is the entry point to using the gonsumer library
+//It is a blocking function, it will return only when Stop() is called. If you don't want to block start it in a different goroutine.
+func (c *Consumer) Start() {
+	var wg sync.WaitGroup
+	wg.Add(c.streamCount)
+	for _, consumer := range c.consumers {
+		go func(consumer QueueConsumer) {
+			defer wg.Done()
+			consumer.consumeWhileActive()
+		}(consumer)
 	}
 	wg.Wait()
 }
 
+func (c *Consumer) Stop() {
+	for _, consumer := range c.consumers {
+		consumer.initiateShutdown()
+	}
+}
+
 type QueueConsumer interface {
-	consumeAndHandleMessages()
+	consumeWhileActive()
+	initiateShutdown()
 	shutdown()
 }
 
@@ -52,6 +58,7 @@ type DefaultQueueConsumer struct {
 	queue    queueCaller
 	handler  func(m Message)
 	consumer *consumer
+	sd       chan bool
 }
 
 type Message struct {
@@ -71,7 +78,20 @@ func NewQueueConsumer(config QueueConfig, handler func(m Message), client http.C
 		offset: offset,
 		caller: defaultHTTPCaller{config.Queue, config.AuthorizationKey, client},
 	}
-	return &DefaultQueueConsumer{config, queue, handler, nil}
+	return &DefaultQueueConsumer{config, queue, handler, nil, make(chan bool, 1)}
+}
+
+func (c *DefaultQueueConsumer) consumeWhileActive() {
+	for {
+		select {
+		case <-c.sd:
+			c.shutdown()
+			return
+		default:
+			c.consumeAndHandleMessages()
+		}
+	}
+
 }
 
 func (c *DefaultQueueConsumer) consumeAndHandleMessages() {
@@ -142,4 +162,8 @@ func (c *DefaultQueueConsumer) shutdown() {
 			log.Printf("ERROR - deleting consumer instance: %s", err.Error())
 		}
 	}
+}
+
+func (c *DefaultQueueConsumer) initiateShutdown() {
+	c.sd <- true
 }

@@ -14,7 +14,7 @@ Go implementation of https://github.com/Financial-Times/message-queue-consumer l
 
 The consumer API is used by calling:
 
- `consumer.Start(QueueConf, func (message Message), httpClient)`
+ `consumer.NewConsumer(QueueConf, func (message Message), httpClient).Start()`
 
 According the QueConf it will start consuming messages on one or more streams and call the passed in function for every message. Make sure the function you pass in is thread safe.
 
@@ -29,8 +29,9 @@ conf := QueueConfig{
   StreamCount: "<Number of goroutines used to consume/process messages. Defaults to 1>",
   AuthorizationKey: "<required from AWS to UCS>",
 }
-queueConsumer.Start(conf, func(m queueConsumer.Message) { //process message in a thread safe manner }, http.Client{})
-
+c := queueConsumer.NewConsumer(conf, func(m queueConsumer.Message) { //process message in a thread safe manner }, http.Client{})
+go c.Start()
+c.Stop()
 ```
 
 ###ToDo
