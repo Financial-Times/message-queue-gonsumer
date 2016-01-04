@@ -3,30 +3,32 @@ package consumer
 import (
 	"errors"
 	"reflect"
+	"sync"
 	"testing"
 )
 
 func TestConsume(t *testing.T) {
+
 	var tests = []struct {
-		iterator *DefaultIterator
+		consumer *DefaultQueueConsumer
 		expMsgs  []Message
 		expErr   error
 		expCons  *consumer //DefaultIterator's consumerInstance
 	}{
 		{
-			&DefaultIterator{queue: defaultTestQueueCaller{}, consumer: consInstTest},
+			&DefaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, handler: func(m Message) {}, consumer: consInstTest},
 			msgsTest,
 			nil,
 			consInstTest,
 		},
 		{
-			&DefaultIterator{queue: defaultTestQueueCaller{}},
+			&DefaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, handler: func(m Message) {}},
 			msgsTest,
 			nil,
 			consInstTest,
 		},
 		{
-			&DefaultIterator{queue: consumeMsgErrorQueueCaller{}, consumer: consInstTest},
+			&DefaultQueueConsumer{config: QueueConfig{}, queue: consumeMsgErrorQueueCaller{}, handler: func(m Message) {}, consumer: consInstTest},
 			nil,
 			errors.New("Error while consuming"),
 			nil,
@@ -34,12 +36,48 @@ func TestConsume(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		actMsgs, actErr := test.iterator.consume()
-		if !reflect.DeepEqual(actMsgs, test.expMsgs) || !reflect.DeepEqual(test.iterator.consumer, test.expCons) || !reflect.DeepEqual(test.expErr, actErr) {
+		actMsgs, actErr := test.consumer.consume()
+		if !reflect.DeepEqual(actMsgs, test.expMsgs) || !reflect.DeepEqual(test.consumer.consumer, test.expCons) || !reflect.DeepEqual(test.expErr, actErr) {
 			t.Errorf("Expected: msgs: %v, error: %v, consumer: %v\nActual: msgs: %v, error: %v consumer: %v.",
-				test.expMsgs, test.expErr, test.expCons, actMsgs, actErr, test.iterator.consumer)
+				test.expMsgs, test.expErr, test.expCons, actMsgs, actErr, test.consumer.consumer)
 		}
 	}
+}
+
+func TestConsumeAndHandleMessagesRecoversFromPanic(t *testing.T) {
+	c := DefaultQueueConsumer{config: QueueConfig{BackoffPeriod: 1}, queue: consumeMsgPanicQueueCaller{}, handler: func(m Message) {}}
+	c.consumeAndHandleMessages()
+}
+
+func TestConsumeWhileActiveTerminates(t *testing.T) {
+	sdChan := make(chan bool)
+	c := DefaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, handler: func(m Message) {}, sd: sdChan}
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		c.consumeWhileActive()
+		wg.Done()
+	}()
+	sdChan <- true
+	wg.Wait()
+}
+
+func TestStartStop(t *testing.T) {
+	consumers := make([]QueueConsumer, 2)
+	for i := 0; i < 2; i++ {
+		consumers[i] = &DefaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, handler: func(m Message) {}, sd: make(chan bool)}
+	}
+	c := Consumer{2, consumers}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		c.Start()
+		wg.Done()
+	}()
+	c.Stop()
+	wg.Wait()
 }
 
 var consInstTest = &consumer{"/queue/consumergroup/instance-d", "/instance-id"}
@@ -48,7 +86,9 @@ var msgsTest = []Message{Message{nil, "body"}, Message{map[string]string{"Messag
 //test queueCaller implementations
 
 //default happy-case behaviour
-type defaultTestQueueCaller struct{}
+type defaultTestQueueCaller struct {
+	gracefullyShutdown bool
+}
 
 func (qc defaultTestQueueCaller) createConsumerInstance() (consumer, error) {
 	return *consInstTest, nil
@@ -93,5 +133,25 @@ func (qc consumeMsgErrorQueueCaller) consumeMessages(cInst consumer) ([]Message,
 }
 
 func (qc consumeMsgErrorQueueCaller) commitOffsets(cInst consumer) error {
+	return errors.New("Error while commiting offsets")
+}
+
+type consumeMsgPanicQueueCaller struct {
+	qc defaultTestQueueCaller
+}
+
+func (qc consumeMsgPanicQueueCaller) createConsumerInstance() (consumer, error) {
+	return qc.qc.createConsumerInstance()
+}
+
+func (qc consumeMsgPanicQueueCaller) destroyConsumerInstance(cInst consumer) error {
+	panic("Panic")
+}
+
+func (qc consumeMsgPanicQueueCaller) consumeMessages(cInst consumer) ([]Message, error) {
+	return nil, errors.New("Error while consuming")
+}
+
+func (qc consumeMsgPanicQueueCaller) commitOffsets(cInst consumer) error {
 	return errors.New("Error while commiting offsets")
 }

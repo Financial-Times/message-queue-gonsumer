@@ -138,7 +138,11 @@ func (c *DefaultQueueConsumer) consume() ([]Message, error) {
 	}
 
 	for _, msg := range msgs {
-		c.handler(msg)
+		if c.config.ConcurrentProcessing == true {
+			go c.handler(msg)
+		} else {
+			c.handler(msg)
+		}
 	}
 
 	err = q.commitOffsets(*c.consumer)

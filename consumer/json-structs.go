@@ -8,11 +8,12 @@ type QueueConfig struct {
 	Topic string   `json:"topic"`
 	//the name of the queue
 	//leave it empty for requests to UCS kafka-proxy
-	Queue            string `json:"queue"`
-	Offset           string `json:"offset"`
-	BackoffPeriod    int    `json:backoffPeriod`
-	StreamCount      int    `json: streamCount`
-	AuthorizationKey string
+	Queue                string `json:"queue"`
+	Offset               string `json:"offset"`
+	BackoffPeriod        int    `json:backoffPeriod`
+	StreamCount          int    `json: streamCount`
+	ConcurrentProcessing bool   `json: concurrentProcessing`
+	AuthorizationKey     string
 }
 
 type consumer struct {

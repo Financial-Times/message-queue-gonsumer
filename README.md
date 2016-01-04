@@ -27,6 +27,7 @@ conf := QueueConfig{
   Offset: "<set to `smallest` otherwise the default `largest` will be considered>",
   BackoffPeriod: "<Period in second to back off if error occured or queue is empty>",
   StreamCount: "<Number of goroutines used to consume/process messages. Defaults to 1>",
+  ConcurrentProcessing: <true|false Whether messages can be processed concurrently or not>,
   AuthorizationKey: "<required from AWS to UCS>",
 }
 c := queueConsumer.NewConsumer(conf, func(m queueConsumer.Message) { //process message in a thread safe manner }, http.Client{})
