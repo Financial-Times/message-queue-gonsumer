@@ -51,7 +51,7 @@ func TestConsumeAndHandleMessagesRecoversFromPanic(t *testing.T) {
 
 func TestConsumeWhileActiveTerminates(t *testing.T) {
 	sdChan := make(chan bool)
-	c := DefaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, handler: func(m Message) {}, sd: sdChan}
+	c := DefaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, handler: func(m Message) {}, shutdownChan: sdChan}
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -65,7 +65,7 @@ func TestConsumeWhileActiveTerminates(t *testing.T) {
 func TestStartStop(t *testing.T) {
 	consumers := make([]QueueConsumer, 2)
 	for i := 0; i < 2; i++ {
-		consumers[i] = &DefaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, handler: func(m Message) {}, sd: make(chan bool)}
+		consumers[i] = &DefaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, handler: func(m Message) {}, shutdownChan: make(chan bool)}
 	}
 	c := Consumer{2, consumers}
 

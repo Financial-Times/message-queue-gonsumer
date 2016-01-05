@@ -54,11 +54,11 @@ type QueueConsumer interface {
 //DefaultQueueConsumer is the default implementation of the QueueConsumer interface.
 //NOTE: DefaultQueueConsumer is not thread-safe!
 type DefaultQueueConsumer struct {
-	config   QueueConfig
-	queue    queueCaller
-	handler  func(m Message)
-	consumer *consumer
-	sd       chan bool
+	config       QueueConfig
+	queue        queueCaller
+	handler      func(m Message)
+	consumer     *consumer
+	shutdownChan chan bool
 }
 
 type Message struct {
@@ -84,7 +84,7 @@ func NewQueueConsumer(config QueueConfig, handler func(m Message), client http.C
 func (c *DefaultQueueConsumer) consumeWhileActive() {
 	for {
 		select {
-		case <-c.sd:
+		case <-c.shutdownChan:
 			c.shutdown()
 			return
 		default:
@@ -169,5 +169,5 @@ func (c *DefaultQueueConsumer) shutdown() {
 }
 
 func (c *DefaultQueueConsumer) initiateShutdown() {
-	c.sd <- true
+	c.shutdownChan <- true
 }
