@@ -18,7 +18,7 @@ func TestBuildConsumerURL(t *testing.T) {
 				addrs:   []string{"https://localhost:8080"},
 				addrInd: 0,
 			},
-			"https://localhost:8080/consumers/zoli/instances/rest-consumer-1-45864",
+			"https://localhost:8080/consumers/group1/instances/rest-consumer-1-45864",
 		},
 		{
 			testConsumer,
@@ -26,7 +26,7 @@ func TestBuildConsumerURL(t *testing.T) {
 				addrs:   []string{"http://kafka-proxy.prod.ft.com"},
 				addrInd: 0,
 			},
-			"http://kafka-proxy.prod.ft.com/consumers/zoli/instances/rest-consumer-1-45864",
+			"http://kafka-proxy.prod.ft.com/consumers/group1/instances/rest-consumer-1-45864",
 		},
 		{
 			testConsumer,
@@ -34,7 +34,7 @@ func TestBuildConsumerURL(t *testing.T) {
 				addrs:   []string{"http://kafka-proxy-1.prod.ft.com", "http://kafka-proxy-2.prod.ft.com"},
 				addrInd: 0,
 			},
-			"http://kafka-proxy-1.prod.ft.com/consumers/zoli/instances/rest-consumer-1-45864",
+			"http://kafka-proxy-1.prod.ft.com/consumers/group1/instances/rest-consumer-1-45864",
 		},
 
 		{
@@ -43,7 +43,7 @@ func TestBuildConsumerURL(t *testing.T) {
 				addrs:   []string{"http://kafka-proxy-1.prod.ft.com", "http://kafka-proxy-2.prod.ft.com"},
 				addrInd: 1,
 			},
-			"http://kafka-proxy-2.prod.ft.com/consumers/zoli/instances/rest-consumer-1-45864",
+			"http://kafka-proxy-2.prod.ft.com/consumers/group1/instances/rest-consumer-1-45864",
 		},
 	}
 
@@ -92,7 +92,7 @@ func TestCreateConsumerInstance_queueAddressesAreChangedInRoundRobinFashion(t *t
 }
 
 var testConsumer = consumer{
-	"http://kafka/consumers/zoli/instances/rest-consumer-1-45864",
+	"http://kafka/consumers/group1/instances/rest-consumer-1-45864",
 	"rest-consumer-1-45864",
 }
 

@@ -1,83 +1,122 @@
 package consumer
 
 import (
-	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 )
 
-//MessageIterator is the consumer API.
-type MessageIterator interface {
-	//At each call returns the next batch of messages
-	NextMessages() ([]Message, error)
+type Consumer struct {
+	streamCount int
+	consumers   []QueueConsumer
 }
 
-//DefaultIterator is the default implementation of the MessageIterator interface.
-//Calling the NewIterator(QueueConfig) a new instance of DefaultIterator is returned.
-//NOTE: DefaultIterator is not thread-safe! If you call NextMessages() from different go routines concurrently, you doing it wrong.
-type DefaultIterator struct {
-	config   QueueConfig
-	queue    queueCaller
-	consumer *consumer
+func NewConsumer(config QueueConfig, handler func(m Message), client http.Client) Consumer {
+	streamCount := 1
+	if config.StreamCount > 0 {
+		streamCount = config.StreamCount
+	}
+	consumers := make([]QueueConsumer, streamCount)
+	for i := 0; i < streamCount; i++ {
+		consumers[i] = NewQueueConsumer(config, handler, client)
+	}
+
+	return Consumer{streamCount, consumers}
 }
 
-//QueueConfig represents the configuration of the queue, consumer group and topic the consumer interested about.
-type QueueConfig struct {
-	//list of queue addresses.
-	Addrs            []string `json:"address"`
-	Group            string   `json:"group"`
-	Topic            string   `json:"topic"`
-	//the name of the queue
-	//leave it empty for requests to UCS kafka-proxy
-	Queue            string `json:"queue"`
-	Offset           string `json:"offset"`
-	AuthorizationKey string
+//This function is the entry point to using the gonsumer library
+//It is a blocking function, it will return only when Stop() is called. If you don't want to block start it in a different goroutine.
+func (c *Consumer) Start() {
+	var wg sync.WaitGroup
+	wg.Add(c.streamCount)
+	for _, consumer := range c.consumers {
+		go func(consumer QueueConsumer) {
+			defer wg.Done()
+			consumer.consumeWhileActive()
+		}(consumer)
+	}
+	wg.Wait()
 }
 
-//Message is the higher-level representation of messages from the queue.
+func (c *Consumer) Stop() {
+	for _, consumer := range c.consumers {
+		consumer.initiateShutdown()
+	}
+}
+
+type QueueConsumer interface {
+	consumeWhileActive()
+	initiateShutdown()
+	shutdown()
+}
+
+//DefaultQueueConsumer is the default implementation of the QueueConsumer interface.
+//NOTE: DefaultQueueConsumer is not thread-safe!
+type DefaultQueueConsumer struct {
+	config       QueueConfig
+	queue        queueCaller
+	handler      func(m Message)
+	consumer     *consumer
+	shutdownChan chan bool
+}
+
 type Message struct {
 	Headers map[string]string
 	Body    string
 }
 
-//NewIterator returns a pointer to a freshly created DefaultIterator.
-func NewIterator(config QueueConfig) MessageIterator {
-	offset := "smallest"
+func NewQueueConsumer(config QueueConfig, handler func(m Message), client http.Client) QueueConsumer {
+	offset := "largest"
 	if len(config.Offset) > 0 {
-		offset = config.Offset;
+		offset = config.Offset
 	}
 	queue := &defaultQueueCaller{
 		addrs:  config.Addrs,
 		group:  config.Group,
 		topic:  config.Topic,
 		offset: offset,
-		caller: defaultHTTPCaller{config.Queue, config.AuthorizationKey, http.Client{}},
+		caller: defaultHTTPCaller{config.Queue, config.AuthorizationKey, client},
 	}
-	return &DefaultIterator{config, queue, nil}
+	return &DefaultQueueConsumer{config, queue, handler, nil, make(chan bool, 1)}
 }
 
-const backoffPeriod = 8
+func (c *DefaultQueueConsumer) consumeWhileActive() {
+	for {
+		select {
+		case <-c.shutdownChan:
+			c.shutdown()
+			return
+		default:
+			c.consumeAndHandleMessages()
+		}
+	}
 
-//NextMessages returns the next batch of messages from the queue.
-func (c *DefaultIterator) NextMessages() (msgs []Message, err error) {
+}
+
+func (c *DefaultQueueConsumer) consumeAndHandleMessages() {
 	defer func() {
 		if r := recover(); r != nil {
 			var ok bool
-			err, ok = r.(error)
+			_, ok = r.(error)
 			if !ok {
-				err = fmt.Errorf("Error: recovered from panic: %v", r)
+				log.Printf("Error: recovered from panic: %v", r)
 			}
 		}
 	}()
-	msgs, err = c.consume()
+	backoffPeriod := 8
+	if c.config.BackoffPeriod > 0 {
+		backoffPeriod = c.config.BackoffPeriod
+	}
+
+	msgs, err := c.consume()
 	if err != nil || len(msgs) == 0 {
 		time.Sleep(time.Duration(backoffPeriod) * time.Second)
+
 	}
-	return msgs, err
 }
 
-func (c *DefaultIterator) consume() ([]Message, error) {
+func (c *DefaultQueueConsumer) consume() ([]Message, error) {
 	q := c.queue
 	if c.consumer == nil {
 		cInst, err := q.createConsumerInstance()
@@ -90,13 +129,45 @@ func (c *DefaultIterator) consume() ([]Message, error) {
 	msgs, err := q.consumeMessages(*c.consumer)
 	if err != nil {
 		log.Printf("ERROR - consuming messages: %s", err.Error())
-		cInst := *c.consumer
-		c.consumer = nil
-		errD := q.destroyConsumerInstance(cInst)
+		errD := q.destroyConsumerInstance(*c.consumer)
 		if errD != nil {
 			log.Printf("ERROR - deleting consumer instance: %s", errD.Error())
 		}
+		c.consumer = nil
 		return nil, err
 	}
+
+	for _, msg := range msgs {
+		if c.config.ConcurrentProcessing == true {
+			go c.handler(msg)
+		} else {
+			c.handler(msg)
+		}
+	}
+
+	err = q.commitOffsets(*c.consumer)
+	if err != nil {
+		log.Printf("ERROR -  commiting offsets: %s", err.Error())
+		errD := q.destroyConsumerInstance(*c.consumer)
+		if errD != nil {
+			log.Printf("ERROR - deleting consumer instance: %s", errD.Error())
+		}
+		c.consumer = nil
+		return nil, err
+	}
+
 	return msgs, nil
+}
+
+func (c *DefaultQueueConsumer) shutdown() {
+	if c.consumer != nil {
+		err := c.queue.destroyConsumerInstance(*c.consumer)
+		if err != nil {
+			log.Printf("ERROR - deleting consumer instance: %s", err.Error())
+		}
+	}
+}
+
+func (c *DefaultQueueConsumer) initiateShutdown() {
+	c.shutdownChan <- true
 }
