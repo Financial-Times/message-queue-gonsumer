@@ -76,6 +76,7 @@ func NewQueueConsumer(config QueueConfig, handler func(m Message), client http.C
 		group:  config.Group,
 		topic:  config.Topic,
 		offset: offset,
+		autoCommitEnable: config.AutoCommitEnable,
 		caller: defaultHTTPCaller{config.Queue, config.AuthorizationKey, client},
 	}
 	return &DefaultQueueConsumer{config, queue, handler, nil, make(chan bool, 1)}
@@ -145,16 +146,17 @@ func (c *DefaultQueueConsumer) consume() ([]Message, error) {
 		}
 	}
 
-	err = q.commitOffsets(*c.consumer)
-	if err != nil {
-		log.Printf("ERROR -  commiting offsets: %s", err.Error())
-		errD := q.destroyConsumerInstance(*c.consumer)
-		if errD != nil {
-			log.Printf("ERROR - deleting consumer instance: %s", errD.Error())
-		}
-		c.consumer = nil
-		return nil, err
-	}
+	if (c.config.AutoCommitEnable == false) {
+		err = q.commitOffsets(*c.consumer)
+		if err != nil {
+			log.Printf("ERROR -  commiting offsets: %s", err.Error())
+			errD := q.destroyConsumerInstance(*c.consumer)
+			if errD != nil {
+				log.Printf("ERROR - deleting consumer instance: %s", errD.Error())
+			}
+			c.consumer = nil
+			return nil, err
+		}}
 
 	return msgs, nil
 }

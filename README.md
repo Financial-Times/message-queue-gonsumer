@@ -29,6 +29,7 @@ conf := QueueConfig{
   StreamCount: "<Number of goroutines used to consume/process messages. Defaults to 1>",
   ConcurrentProcessing: <true|false Whether messages can be processed concurrently or not>,
   AuthorizationKey: "<required from AWS to UCS>",
+  AutoCommitEnable: "<true|false Whether massages are smaller/larger. Default value is false.>",
 }
 c := queueConsumer.NewConsumer(conf, func(m queueConsumer.Message) { //process message in a thread safe manner }, http.Client{})
 go c.Start()
