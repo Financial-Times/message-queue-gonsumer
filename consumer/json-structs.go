@@ -14,7 +14,7 @@ type QueueConfig struct {
 	StreamCount          int    `json: streamCount`
 	ConcurrentProcessing bool   `json: concurrentProcessing`
 	AuthorizationKey     string
-	AutoCommitEnable	 bool	`json: autoCommitEnable`
+	AutoCommitEnable     bool `json: autoCommitEnable`
 }
 
 type consumer struct {

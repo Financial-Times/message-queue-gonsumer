@@ -42,7 +42,6 @@ func (q *defaultQueueCaller) createConsumerInstance() (c consumer, err error) {
 	addr := q.addrs[q.addrInd]
 
 	createConsumerReq := `{"auto.offset.reset": "` + q.offset + `", "auto.commit.enable": "` + strconv.FormatBool(q.autoCommitEnable) + `"}`
-	log.Printf("here %s",createConsumerReq)
 	data, err := q.caller.DoReq("POST", addr + "/consumers/" + q.group, strings.NewReader(createConsumerReq), map[string]string{"Content-Type": "application/json"}, http.StatusOK)
 	if err != nil {
 		return
