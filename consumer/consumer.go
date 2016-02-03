@@ -76,6 +76,7 @@ func NewQueueConsumer(config QueueConfig, handler func(m Message), client http.C
 		group:  config.Group,
 		topic:  config.Topic,
 		offset: offset,
+		autoCommitEnable: config.AutoCommitEnable,
 		caller: defaultHTTPCaller{config.Queue, config.AuthorizationKey, client},
 	}
 	return &DefaultQueueConsumer{config, queue, handler, nil, make(chan bool, 1)}
