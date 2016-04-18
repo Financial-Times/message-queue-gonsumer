@@ -3,7 +3,6 @@ package consumer
 import (
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"log"
 	"regexp"
 	"strings"
@@ -35,19 +34,39 @@ func parseResponse(data []byte) ([]Message, error) {
 	return msgs, nil
 }
 
+// FT async msg format:
+//
+// 'message-version CRLF
+//*(message-header CRLF)
+// CRLF
+// message-body
 func parseMessage(raw string) (m Message, err error) {
 	decoded, err := base64.StdEncoding.DecodeString(raw)
 	if err != nil {
 		log.Printf("ERROR - failure in decoding base64 value: %s", err.Error())
 		return
 	}
-	if m.Headers, err = parseHeaders(string(decoded[:])); err != nil {
+	doubleNewLineStartIndex := getHeaderSectionEndingIndex(string(decoded[:]))
+	if m.Headers, err = parseHeaders(string(decoded[:doubleNewLineStartIndex])); err != nil {
 		return
 	}
-	if m.Body, err = parseBody(string(decoded[:])); err != nil {
-		return
-	}
+	m.Body = strings.TrimSpace(string(decoded[doubleNewLineStartIndex:]))
 	return
+}
+
+func getHeaderSectionEndingIndex(msg string) int {
+	//FT msg format uses CRLF for line endings
+	i := strings.Index(msg, "\r\n\r\n")
+	if i != -1 {
+		return i
+	}
+	//fallback to UNIX line endings
+	i = strings.Index(msg, "\n\n")
+	if i != -1 {
+		return i
+	}
+	log.Printf("WARN  - message with no message body: [%s]", msg)
+	return len(msg)
 }
 
 var re = regexp.MustCompile("[\\w-]*:[\\w\\-:/. ]*")
@@ -56,12 +75,7 @@ var kre = regexp.MustCompile("[\\w-]*:")
 var vre = regexp.MustCompile(":[\\w-:/. ]*")
 
 func parseHeaders(msg string) (map[string]string, error) {
-	//naive
-	i := strings.Index(msg, "{")
-	if i == -1 {
-		return nil, fmt.Errorf("Cannot parse headers: cannot find '{' character. Message: %s", msg)
-	}
-	headerLines := re.FindAllString(msg[:i], -1)
+	headerLines := re.FindAllString(msg, -1)
 
 	headers := make(map[string]string)
 	for _, line := range headerLines {
@@ -75,13 +89,4 @@ func parseHeader(header string) (string, string) {
 	key := kre.FindString(header)
 	value := vre.FindString(header)
 	return key[:len(key)-1], strings.TrimSpace(value[1:])
-}
-func parseBody(msg string) (string, error) {
-	//naive
-	f := strings.Index(msg, "{")
-	l := strings.LastIndex(msg, "}")
-	if f == -1 || l == -1 {
-		return "", fmt.Errorf("Cannot parse body: cannot find '{' or '}' characters. Message: %s", msg)
-	}
-	return msg[f : l+1], nil
 }
