@@ -47,7 +47,6 @@ func parseMessage(raw string) (m Message, err error) {
 		return
 	}
 	doubleNewLineStartIndex := getHeaderSectionEndingIndex(string(decoded[:]))
-	log.Printf("INFO  - index [%d]\n", doubleNewLineStartIndex)
 	if m.Headers, err = parseHeaders(string(decoded[:doubleNewLineStartIndex])); err != nil {
 		return
 	}
