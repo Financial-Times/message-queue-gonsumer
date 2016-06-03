@@ -8,8 +8,8 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 type queueCaller interface {
@@ -22,7 +22,7 @@ type queueCaller interface {
 type defaultQueueCaller struct {
 	//pool of queue addresses
 	//the active address is changed in a round-robin fashion before each new consumer instance creation
-	addrs            []string
+	addrs []string
 	//used queue addr
 	//this gets 'incremented modulo' at each createConsumerInstance() call
 	addrInd          int
@@ -42,7 +42,7 @@ func (q *defaultQueueCaller) createConsumerInstance() (c consumer, err error) {
 	addr := q.addrs[q.addrInd]
 
 	createConsumerReq := `{"auto.offset.reset": "` + q.offset + `", "auto.commit.enable": "` + strconv.FormatBool(q.autoCommitEnable) + `"}`
-	data, err := q.caller.DoReq("POST", addr + "/consumers/" + q.group, strings.NewReader(createConsumerReq), map[string]string{"Content-Type": "application/json"}, http.StatusOK)
+	data, err := q.caller.DoReq("POST", addr+"/consumers/"+q.group, strings.NewReader(createConsumerReq), map[string]string{"Content-Type": "application/json"}, http.StatusOK)
 	if err != nil {
 		return
 	}

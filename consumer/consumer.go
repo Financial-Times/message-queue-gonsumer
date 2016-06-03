@@ -72,12 +72,12 @@ func NewQueueConsumer(config QueueConfig, handler func(m Message), client http.C
 		offset = config.Offset
 	}
 	queue := &defaultQueueCaller{
-		addrs:  config.Addrs,
-		group:  config.Group,
-		topic:  config.Topic,
-		offset: offset,
+		addrs:            config.Addrs,
+		group:            config.Group,
+		topic:            config.Topic,
+		offset:           offset,
 		autoCommitEnable: config.AutoCommitEnable,
-		caller: defaultHTTPCaller{config.Queue, config.AuthorizationKey, client},
+		caller:           defaultHTTPCaller{config.Queue, config.AuthorizationKey, client},
 	}
 	return &DefaultQueueConsumer{config, queue, handler, nil, make(chan bool, 1)}
 }
@@ -146,7 +146,7 @@ func (c *DefaultQueueConsumer) consume() ([]Message, error) {
 		}
 	}
 
-	if (c.config.AutoCommitEnable == false) {
+	if c.config.AutoCommitEnable == false {
 		err = q.commitOffsets(*c.consumer)
 		if err != nil {
 			log.Printf("ERROR -  commiting offsets: %s", err.Error())
@@ -156,7 +156,8 @@ func (c *DefaultQueueConsumer) consume() ([]Message, error) {
 			}
 			c.consumer = nil
 			return nil, err
-		}}
+		}
+	}
 
 	return msgs, nil
 }
