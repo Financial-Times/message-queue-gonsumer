@@ -15,10 +15,10 @@ func TestBuildConsumerURL(t *testing.T) {
 		{
 			testConsumer,
 			defaultQueueCaller{
-				addrs:   []string{"https://localhost:8080"},
+				addrs:   []string{"https://localhost:8080/__kafka-rest-proxy"},
 				addrInd: 0,
 			},
-			"https://localhost:8080/consumers/group1/instances/rest-consumer-1-45864",
+			"https://localhost:8080/__kafka-rest-proxy/consumers/group1/instances/rest-consumer-1-45864",
 		},
 		{
 			testConsumer,
