@@ -140,6 +140,9 @@ func (c *DefaultQueueConsumer) consume() ([]Message, error) {
 
 	if c.config.ConcurrentProcessing == true {
 		processors := 100
+		if c.config.NoOfProcessors > 0 {
+			processors = c.config.NoOfProcessors
+		}
 		rwWg := sync.WaitGroup{}
 		ch := make(chan Message, 128)
 

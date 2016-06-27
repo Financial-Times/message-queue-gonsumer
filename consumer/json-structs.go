@@ -15,6 +15,7 @@ type QueueConfig struct {
 	ConcurrentProcessing bool   `json: concurrentProcessing`
 	AuthorizationKey     string
 	AutoCommitEnable     bool `json: autoCommitEnable`
+	NoOfProcessors       int
 }
 
 type consumer struct {
