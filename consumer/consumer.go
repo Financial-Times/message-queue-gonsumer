@@ -138,10 +138,34 @@ func (c *DefaultQueueConsumer) consume() ([]Message, error) {
 		return nil, err
 	}
 
-	for _, msg := range msgs {
-		if c.config.ConcurrentProcessing == true {
-			go c.handler(msg)
-		} else {
+	if c.config.ConcurrentProcessing == true {
+		processors := 100
+		rwWg := sync.WaitGroup{}
+		ch := make(chan Message, 128)
+
+		rwWg.Add(1)
+		go func() {
+			for _, msg := range msgs {
+				ch <- msg
+			}
+			close(ch)
+			rwWg.Done()
+		}()
+
+		for i := 0; i < processors; i++ {
+			rwWg.Add(1)
+			go func() {
+				for m := range ch {
+					c.handler(m)
+				}
+
+				rwWg.Done()
+			}()
+		}
+		rwWg.Wait()
+
+	} else {
+		for _, msg := range msgs {
 			c.handler(msg)
 		}
 	}
