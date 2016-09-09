@@ -121,7 +121,20 @@ func (caller defaultHTTPCaller) DoReq(method, url string, body io.Reader, header
 		log.Printf("ERROR - executing request: %s", err.Error())
 		return
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		io.Copy(ioutil.Discard, resp.Body)
+		resp.Body.Close()
+		if resp.StatusCode >= 500 {
+			// This might be a problem with the server instance, which may have been taken out
+			// of the DNS pool, but becuase we might still have a tcp connection open, we'll
+			// never re-do the DNS lookup and get a connection to a working server.  So when we
+			// get 5xx, close idle connections to force the next requests to re-connect.
+			if t, ok := caller.client.Transport.(*http.Transport); ok {
+				t.CloseIdleConnections()
+			}
+		}
+	}()
 
 	if resp.StatusCode != expectedStatus {
 		err = fmt.Errorf("Unexpected response status %d. Expected: %d.", resp.StatusCode, expectedStatus)
