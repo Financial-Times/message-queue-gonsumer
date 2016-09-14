@@ -127,7 +127,7 @@ func (caller defaultHTTPCaller) DoReq(method, url string, body io.Reader, header
 		resp.Body.Close()
 		if resp.StatusCode >= 500 {
 			// This might be a problem with the server instance, which may have been taken out
-			// of the DNS pool, but becuase we might still have a tcp connection open, we'll
+			// of the DNS pool, but because we might still have a tcp connection open, we'll
 			// never re-do the DNS lookup and get a connection to a working server.  So when we
 			// get 5xx, close idle connections to force the next requests to re-connect.
 			if t, ok := caller.client.Transport.(*http.Transport); ok {
