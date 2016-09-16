@@ -12,7 +12,20 @@ type Consumer struct {
 	consumers   []QueueConsumer
 }
 
-func NewConsumer(config QueueConfig, handler func(m Message), agingClient AgeingClient) Consumer {
+func NewConsumer(config QueueConfig, handler func(m Message), client http.Client) Consumer {
+	streamCount := 1
+	if config.StreamCount > 0 {
+		streamCount = config.StreamCount
+	}
+	consumers := make([]QueueConsumer, streamCount)
+	for i := 0; i < streamCount; i++ {
+		consumers[i] = NewQueueConsumer(config, handler, client)
+	}
+
+	return Consumer{streamCount, consumers}
+}
+
+func NewAgeingConsumer(config QueueConfig, handler func(m Message), agingClient AgeingClient) Consumer {
 	streamCount := 1
 	if config.StreamCount > 0 {
 		streamCount = config.StreamCount
