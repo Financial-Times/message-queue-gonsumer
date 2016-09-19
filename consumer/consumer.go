@@ -25,6 +25,20 @@ func NewConsumer(config QueueConfig, handler func(m Message), client http.Client
 	return Consumer{streamCount, consumers}
 }
 
+func NewAgeingConsumer(config QueueConfig, handler func(m Message), agingClient AgeingClient) Consumer {
+	streamCount := 1
+	if config.StreamCount > 0 {
+		streamCount = config.StreamCount
+	}
+	consumers := make([]QueueConsumer, streamCount)
+	for i := 0; i < streamCount; i++ {
+		consumers[i] = NewQueueConsumer(config, handler, agingClient.Client)
+	}
+	agingClient.StartAgeingProcess()
+
+	return Consumer{streamCount, consumers}
+}
+
 //This function is the entry point to using the gonsumer library
 //It is a blocking function, it will return only when Stop() is called. If you don't want to block start it in a different goroutine.
 func (c *Consumer) Start() {
