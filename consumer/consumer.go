@@ -1,6 +1,7 @@
 package consumer
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"sync"
@@ -68,9 +69,13 @@ type QueueConsumer interface {
 //DefaultQueueConsumer is the default implementation of the QueueConsumer interface.
 //NOTE: DefaultQueueConsumer is not thread-safe!
 type DefaultQueueConsumer struct {
+	baseQueueConsumer
+	handler func(m Message)
+}
+
+type baseQueueConsumer struct {
 	config       QueueConfig
 	queue        queueCaller
-	handler      func(m Message)
 	consumer     *consumer
 	shutdownChan chan bool
 }
@@ -93,10 +98,10 @@ func NewQueueConsumer(config QueueConfig, handler func(m Message), client http.C
 		autoCommitEnable: config.AutoCommitEnable,
 		caller:           defaultHTTPCaller{config.Queue, config.AuthorizationKey, client},
 	}
-	return &DefaultQueueConsumer{config, queue, handler, nil, make(chan bool, 1)}
+	return &DefaultQueueConsumer{baseQueueConsumer{config, queue, nil, make(chan bool, 1)}, handler}
 }
 
-func (c *DefaultQueueConsumer) consumeWhileActive() {
+func (c *baseQueueConsumer) consumeWhileActive() {
 	for {
 		select {
 		case <-c.shutdownChan:
@@ -109,7 +114,7 @@ func (c *DefaultQueueConsumer) consumeWhileActive() {
 
 }
 
-func (c *DefaultQueueConsumer) consumeAndHandleMessages() {
+func (c *baseQueueConsumer) consumeAndHandleMessages() {
 	defer func() {
 		if r := recover(); r != nil {
 			var ok bool
@@ -127,8 +132,11 @@ func (c *DefaultQueueConsumer) consumeAndHandleMessages() {
 	msgs, err := c.consume()
 	if err != nil || len(msgs) == 0 {
 		time.Sleep(time.Duration(backoffPeriod) * time.Second)
-
 	}
+}
+
+func (c *baseQueueConsumer) consume() ([]Message, error) {
+	return nil, errors.New("Not implemented! Please use a DefaultQueueConsumer or DefaultBatchedQueueConsumer instead.")
 }
 
 func (c *DefaultQueueConsumer) consume() ([]Message, error) {
@@ -203,7 +211,7 @@ func (c *DefaultQueueConsumer) consume() ([]Message, error) {
 	return msgs, nil
 }
 
-func (c *DefaultQueueConsumer) shutdown() {
+func (c *baseQueueConsumer) shutdown() {
 	if c.consumer != nil {
 		err := c.queue.destroyConsumerInstance(*c.consumer)
 		if err != nil {
@@ -212,6 +220,6 @@ func (c *DefaultQueueConsumer) shutdown() {
 	}
 }
 
-func (c *DefaultQueueConsumer) initiateShutdown() {
+func (c *baseQueueConsumer) initiateShutdown() {
 	c.shutdownChan <- true
 }
