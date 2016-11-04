@@ -16,19 +16,19 @@ func TestConsume(t *testing.T) {
 		expCons  *consumer //DefaultIterator's consumerInstance
 	}{
 		{
-			&DefaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, handler: func(m Message) {}, consumer: consInstTest},
+			&DefaultQueueConsumer{baseQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, consumer: consInstTest}, func(m Message) {}},
 			msgsTest,
 			nil,
 			consInstTest,
 		},
 		{
-			&DefaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, handler: func(m Message) {}},
+			&DefaultQueueConsumer{baseQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}}, func(m Message) {}},
 			msgsTest,
 			nil,
 			consInstTest,
 		},
 		{
-			&DefaultQueueConsumer{config: QueueConfig{}, queue: consumeMsgErrorQueueCaller{}, handler: func(m Message) {}, consumer: consInstTest},
+			&DefaultQueueConsumer{baseQueueConsumer{config: QueueConfig{}, queue: consumeMsgErrorQueueCaller{}, consumer: consInstTest}, func(m Message) {}},
 			nil,
 			errors.New("Error while consuming"),
 			nil,
@@ -45,13 +45,13 @@ func TestConsume(t *testing.T) {
 }
 
 func TestConsumeAndHandleMessagesRecoversFromPanic(t *testing.T) {
-	c := DefaultQueueConsumer{config: QueueConfig{BackoffPeriod: 1}, queue: consumeMsgPanicQueueCaller{}, handler: func(m Message) {}}
+	c := DefaultQueueConsumer{baseQueueConsumer{config: QueueConfig{BackoffPeriod: 1}, queue: consumeMsgPanicQueueCaller{}}, func(m Message) {}}
 	c.consumeAndHandleMessages()
 }
 
 func TestConsumeWhileActiveTerminates(t *testing.T) {
 	sdChan := make(chan bool)
-	c := DefaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, handler: func(m Message) {}, shutdownChan: sdChan}
+	c := DefaultQueueConsumer{baseQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, shutdownChan: sdChan}, func(m Message) {}}
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -65,7 +65,7 @@ func TestConsumeWhileActiveTerminates(t *testing.T) {
 func TestStartStop(t *testing.T) {
 	consumers := make([]QueueConsumer, 2)
 	for i := 0; i < 2; i++ {
-		consumers[i] = &DefaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, handler: func(m Message) {}, shutdownChan: make(chan bool)}
+		consumers[i] = &DefaultQueueConsumer{baseQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, shutdownChan: make(chan bool)}, func(m Message) {}}
 	}
 	c := Consumer{2, consumers}
 
