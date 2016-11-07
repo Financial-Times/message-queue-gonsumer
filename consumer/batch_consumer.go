@@ -23,5 +23,7 @@ type BatchedMessageProcessor struct {
 }
 
 func (b BatchedMessageProcessor) consume(msgs ...Message) {
-	b.handler(msgs)
+	if len(msgs) > 0 {
+		b.handler(msgs)
+	}
 }
