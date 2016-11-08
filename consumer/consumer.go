@@ -1,7 +1,6 @@
 package consumer
 
 import (
-	"errors"
 	"log"
 	"net/http"
 	"sync"
@@ -11,6 +10,16 @@ import (
 type Consumer struct {
 	streamCount int
 	consumers   []QueueConsumer
+}
+
+type QueueConsumer interface {
+	consumeWhileActive()
+	initiateShutdown()
+	shutdown()
+}
+
+type MessageProcessor interface {
+	consume(messages ...Message)
 }
 
 func NewConsumer(config QueueConfig, handler func(m Message), client http.Client) Consumer {
@@ -74,29 +83,23 @@ func (c *Consumer) Stop() {
 	}
 }
 
-type QueueConsumer interface {
-	consumeWhileActive()
-	initiateShutdown()
-	shutdown()
-}
-
 //DefaultQueueConsumer is the default implementation of the QueueConsumer interface.
 //NOTE: DefaultQueueConsumer is not thread-safe!
 type DefaultQueueConsumer struct {
-	baseQueueConsumer
-	handler func(m Message)
-}
-
-type baseQueueConsumer struct {
 	config       QueueConfig
 	queue        queueCaller
 	consumer     *consumer
 	shutdownChan chan bool
+	processor    MessageProcessor
 }
 
 type Message struct {
 	Headers map[string]string
 	Body    string
+}
+
+type SplitMessageProcessor struct {
+	handler func(m Message)
 }
 
 func NewQueueConsumer(config QueueConfig, handler func(m Message), client http.Client) QueueConsumer {
@@ -112,10 +115,10 @@ func NewQueueConsumer(config QueueConfig, handler func(m Message), client http.C
 		autoCommitEnable: config.AutoCommitEnable,
 		caller:           defaultHTTPCaller{config.Queue, config.AuthorizationKey, client},
 	}
-	return &DefaultQueueConsumer{baseQueueConsumer{config, queue, nil, make(chan bool, 1)}, handler}
+	return &DefaultQueueConsumer{config, queue, nil, make(chan bool, 1), SplitMessageProcessor{handler}}
 }
 
-func (c *baseQueueConsumer) consumeWhileActive() {
+func (c *DefaultQueueConsumer) consumeWhileActive() {
 	for {
 		select {
 		case <-c.shutdownChan:
@@ -125,10 +128,9 @@ func (c *baseQueueConsumer) consumeWhileActive() {
 			c.consumeAndHandleMessages()
 		}
 	}
-
 }
 
-func (c *baseQueueConsumer) consumeAndHandleMessages() {
+func (c *DefaultQueueConsumer) consumeAndHandleMessages() {
 	defer func() {
 		if r := recover(); r != nil {
 			var ok bool
@@ -149,8 +151,10 @@ func (c *baseQueueConsumer) consumeAndHandleMessages() {
 	}
 }
 
-func (c *baseQueueConsumer) consume() ([]Message, error) {
-	return nil, errors.New("Not implemented! Please use a DefaultQueueConsumer or DefaultBatchedQueueConsumer instead.")
+func (p SplitMessageProcessor) consume(msgs ...Message) {
+	for _, msg := range msgs {
+		p.handler(msg)
+	}
 }
 
 func (c *DefaultQueueConsumer) consume() ([]Message, error) {
@@ -163,6 +167,7 @@ func (c *DefaultQueueConsumer) consume() ([]Message, error) {
 		}
 		c.consumer = &cInst
 	}
+
 	msgs, err := q.consumeMessages(*c.consumer)
 	if err != nil {
 		log.Printf("ERROR - consuming messages: %s", err.Error())
@@ -195,7 +200,7 @@ func (c *DefaultQueueConsumer) consume() ([]Message, error) {
 			rwWg.Add(1)
 			go func() {
 				for m := range ch {
-					c.handler(m)
+					c.processor.consume(m)
 				}
 
 				rwWg.Done()
@@ -204,9 +209,7 @@ func (c *DefaultQueueConsumer) consume() ([]Message, error) {
 		rwWg.Wait()
 
 	} else {
-		for _, msg := range msgs {
-			c.handler(msg)
-		}
+		c.processor.consume(msgs...)
 	}
 
 	if c.config.AutoCommitEnable == false {
@@ -225,7 +228,7 @@ func (c *DefaultQueueConsumer) consume() ([]Message, error) {
 	return msgs, nil
 }
 
-func (c *baseQueueConsumer) shutdown() {
+func (c *DefaultQueueConsumer) shutdown() {
 	if c.consumer != nil {
 		err := c.queue.destroyConsumerInstance(*c.consumer)
 		if err != nil {
@@ -234,6 +237,6 @@ func (c *baseQueueConsumer) shutdown() {
 	}
 }
 
-func (c *baseQueueConsumer) initiateShutdown() {
+func (c *DefaultQueueConsumer) initiateShutdown() {
 	c.shutdownChan <- true
 }
