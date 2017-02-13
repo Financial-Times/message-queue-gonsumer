@@ -113,7 +113,7 @@ func NewQueueConsumer(config QueueConfig, handler func(m Message), client http.C
 		topic:            config.Topic,
 		offset:           offset,
 		autoCommitEnable: config.AutoCommitEnable,
-		caller:           defaultHTTPCaller{config.Queue, config.AuthorizationKey, client},
+		caller:           defaultHTTPCaller{config.AuthorizationKey, client},
 	}
 	return &DefaultQueueConsumer{config, queue, nil, make(chan bool, 1), SplitMessageProcessor{handler}}
 }

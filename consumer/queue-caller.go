@@ -93,7 +93,6 @@ func (q *defaultQueueCaller) buildConsumerURL(c consumer) (uri *url.URL, err err
 }
 
 type defaultHTTPCaller struct {
-	hostHeader       string
 	authorizationKey string
 	client           http.Client
 }
@@ -107,9 +106,6 @@ func (caller defaultHTTPCaller) DoReq(method, url string, body io.Reader, header
 
 	for k, v := range headers {
 		req.Header.Add(k, v)
-	}
-	if len(caller.hostHeader) > 0 {
-		req.Host = caller.hostHeader
 	}
 
 	if len(caller.authorizationKey) > 0 {
