@@ -115,6 +115,10 @@ func (qc defaultTestQueueCaller) commitOffsets(cInst consumer) error {
 	return nil
 }
 
+func (qc defaultTestQueueCaller) checkConnectivity() error {
+	return nil
+}
+
 //return error on consume and destroy
 type consumeMsgErrorQueueCaller struct {
 	qc defaultTestQueueCaller
@@ -136,6 +140,10 @@ func (qc consumeMsgErrorQueueCaller) commitOffsets(cInst consumer) error {
 	return errors.New("Error while commiting offsets")
 }
 
+func (qc consumeMsgErrorQueueCaller) checkConnectivity() error {
+	return errors.New("Connectivity error")
+}
+
 type consumeMsgPanicQueueCaller struct {
 	qc defaultTestQueueCaller
 }
@@ -154,4 +162,8 @@ func (qc consumeMsgPanicQueueCaller) consumeMessages(cInst consumer) ([]Message,
 
 func (qc consumeMsgPanicQueueCaller) commitOffsets(cInst consumer) error {
 	return errors.New("Error while commiting offsets")
+}
+
+func (qc consumeMsgPanicQueueCaller) checkConnectivity() error {
+	return errors.New("Connectivity error")
 }

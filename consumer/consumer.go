@@ -1,6 +1,7 @@
 package consumer
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"sync"
@@ -16,6 +17,7 @@ type QueueConsumer interface {
 	consumeWhileActive()
 	initiateShutdown()
 	shutdown()
+	checkConnectivity() error
 }
 
 type MessageProcessor interface {
@@ -81,6 +83,19 @@ func (c *Consumer) Stop() {
 	for _, consumer := range c.consumers {
 		consumer.initiateShutdown()
 	}
+}
+
+func (c Consumer) ConnectivityCheck() (string, error) {
+	errMsg := ""
+	for _, consumer := range c.consumers {
+		if err := consumer.checkConnectivity(); err != nil {
+			errMsg = errMsg + err.Error()
+		}
+	}
+	if errMsg == "" {
+		return "Connectivity to consumer proxies is OK.", nil
+	}
+	return "Error connecting to consumer proxies", errors.New(errMsg)
 }
 
 //DefaultQueueConsumer is the default implementation of the QueueConsumer interface.
@@ -239,4 +254,8 @@ func (c *DefaultQueueConsumer) shutdown() {
 
 func (c *DefaultQueueConsumer) initiateShutdown() {
 	c.shutdownChan <- true
+}
+
+func (c *DefaultQueueConsumer) checkConnectivity() error {
+	return c.queue.checkConnectivity()
 }
