@@ -103,6 +103,6 @@ func TestConnectivityCheckNoKafka(t *testing.T) {
 	c := NewConsumer(consumerConfigMock, func(m Message) {}, http.Client{})
 	msg, err := c.ConnectivityCheck()
 
-	assert.EqualError(t, err, "Could not connect to proxy: Get http://do.not.exist.com/: dial tcp: lookup do.not.exist.com: no such host; ", "It should return an error")
+	assert.Error(t, err, "It should return an error")
 	assert.Equal(t, "Error connecting to consumer proxies", msg, `The check message should be "Error connecting to consumer proxies"`)
 }
