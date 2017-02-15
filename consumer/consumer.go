@@ -8,11 +8,13 @@ import (
 	"time"
 )
 
+// Consumer provide methods to consume messages from a kafka proxy
 type Consumer struct {
 	streamCount int
 	consumers   []QueueConsumer
 }
 
+// QueueConsumer specifies a generic queue consumer
 type QueueConsumer interface {
 	consumeWhileActive()
 	initiateShutdown()
@@ -20,10 +22,12 @@ type QueueConsumer interface {
 	checkConnectivity() error
 }
 
+// MessageProcessor defines a generic interface for message processors
 type MessageProcessor interface {
 	consume(messages ...Message)
 }
 
+// NewConsumer returns a new instance of a Consumer
 func NewConsumer(config QueueConfig, handler func(m Message), client http.Client) Consumer {
 	streamCount := 1
 	if config.StreamCount > 0 {
@@ -37,6 +41,7 @@ func NewConsumer(config QueueConfig, handler func(m Message), client http.Client
 	return Consumer{streamCount, consumers}
 }
 
+// NewBatchedConsumer returns a Consumer to manage batches of messages
 func NewBatchedConsumer(config QueueConfig, handler func(m []Message), client http.Client) Consumer {
 	streamCount := 1
 	if config.StreamCount > 0 {
@@ -51,6 +56,7 @@ func NewBatchedConsumer(config QueueConfig, handler func(m []Message), client ht
 	return Consumer{streamCount, consumers}
 }
 
+// NewAgeingConsumer returns a new instance of a Consumer with an AgeingClient
 func NewAgeingConsumer(config QueueConfig, handler func(m Message), agingClient AgeingClient) Consumer {
 	streamCount := 1
 	if config.StreamCount > 0 {
@@ -65,7 +71,7 @@ func NewAgeingConsumer(config QueueConfig, handler func(m Message), agingClient 
 	return Consumer{streamCount, consumers}
 }
 
-//This function is the entry point to using the gonsumer library
+//Start method is the entry point to using the gonsumer library
 //It is a blocking function, it will return only when Stop() is called. If you don't want to block start it in a different goroutine.
 func (c *Consumer) Start() {
 	var wg sync.WaitGroup
@@ -79,12 +85,14 @@ func (c *Consumer) Start() {
 	wg.Wait()
 }
 
+//Stop is a methode to stop the consumer
 func (c *Consumer) Stop() {
 	for _, consumer := range c.consumers {
 		consumer.initiateShutdown()
 	}
 }
 
+//ConnectivityCheck returns the connection status with the kafka proxy
 func (c Consumer) ConnectivityCheck() (string, error) {
 	errMsg := ""
 	for _, consumer := range c.consumers {
@@ -108,15 +116,18 @@ type DefaultQueueConsumer struct {
 	processor    MessageProcessor
 }
 
+//Message defines the consumed messages
 type Message struct {
 	Headers map[string]string
 	Body    string
 }
 
+//SplitMessageProcessor is
 type SplitMessageProcessor struct {
 	handler func(m Message)
 }
 
+//NewQueueConsumer returns a new instance of a QueueConsumer
 func NewQueueConsumer(config QueueConfig, handler func(m Message), client http.Client) QueueConsumer {
 	offset := "largest"
 	if len(config.Offset) > 0 {

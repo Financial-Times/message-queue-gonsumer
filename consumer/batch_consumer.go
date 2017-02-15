@@ -2,6 +2,7 @@ package consumer
 
 import "net/http"
 
+// NewBatchedQueueConsumer returns a new instance of a QueueConsumer that handles batches of messages
 func NewBatchedQueueConsumer(config QueueConfig, handler func(m []Message), client http.Client) QueueConsumer {
 	offset := "largest"
 	if len(config.Offset) > 0 {
@@ -18,6 +19,7 @@ func NewBatchedQueueConsumer(config QueueConfig, handler func(m []Message), clie
 	return &DefaultQueueConsumer{config, queue, nil, make(chan bool, 1), BatchedMessageProcessor{handler}}
 }
 
+//BatchedMessageProcessor process messages in batches
 type BatchedMessageProcessor struct {
 	handler func(m []Message)
 }

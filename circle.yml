@@ -5,8 +5,6 @@ dependencies:
     - go get -t -d -v ./...
     - go build -v ./...
 test:
-  pre:
-    - go get github.com/mattn/goveralls
   override:
     - mkdir -p $CIRCLE_TEST_REPORTS/golang
     - go test -race -v | go-junit-report > $CIRCLE_TEST_REPORTS/golang/junit.xml

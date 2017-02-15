@@ -1,16 +1,18 @@
 package consumer
 
 import (
+	"log"
 	"net/http"
 	"time"
-	"log"
 )
 
+//AgeingClient defines an ageing http client for consuming messages
 type AgeingClient struct {
 	Client http.Client
 	MaxAge time.Duration
 }
 
+//StartAgeingProcess periodically close idle connections according to the MaxAge of an AgeingClient
 func (client AgeingClient) StartAgeingProcess() {
 	log.Printf("INFO: Starting aging [%d]", client.MaxAge)
 	ticker := time.NewTicker(client.MaxAge)
