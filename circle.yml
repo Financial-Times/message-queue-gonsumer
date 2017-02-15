@@ -10,7 +10,5 @@ test:
   override:
     - mkdir -p $CIRCLE_TEST_REPORTS/golang
     - go test -race -v | go-junit-report > $CIRCLE_TEST_REPORTS/golang/junit.xml
-    - go test -v -cover -race -coverprofile=$CIRCLE_ARTIFACTS/overall-coverage.result ./consumer
   post:
-    - goveralls -coverprofile=$CIRCLE_ARTIFACTS/overall-coverage.result -repotoken=$COVERALLS_TOKEN
     - bash <(curl -s https://codecov.io/bash)
