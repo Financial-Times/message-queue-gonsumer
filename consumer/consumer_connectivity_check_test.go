@@ -92,3 +92,17 @@ func TestConnectivityCheckUnhappyKafkaAndMissingTopic(t *testing.T) {
 	assert.EqualError(t, err, "Topic was not found; Could not connect to proxy: Unexpected response status 500. Expected: 200; ", "It should return an error")
 	assert.Equal(t, "Error connecting to consumer proxies", msg, `The check message should be "Error connecting to consumer proxies"`)
 }
+
+func TestConnectivityCheckNoKafka(t *testing.T) {
+	proxy1 := setupMockKafka(t, 200, mockedTopics)
+	defer proxy1.Close()
+	proxy2 := setupMockKafka(t, 200, mockedTopics)
+	defer proxy2.Close()
+
+	consumerConfigMock.Addrs = []string{proxy1.URL, proxy2.URL, "http://do.not.exist.com/"}
+	c := NewConsumer(consumerConfigMock, func(m Message) {}, http.Client{})
+	msg, err := c.ConnectivityCheck()
+
+	assert.EqualError(t, err, "Could not connect to proxy: Get http://do.not.exist.com/: dial tcp: lookup do.not.exist.com: no such host; ", "It should return an error")
+	assert.Equal(t, "Error connecting to consumer proxies", msg, `The check message should be "Error connecting to consumer proxies"`)
+}
