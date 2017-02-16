@@ -8,6 +8,13 @@ import (
 	"time"
 )
 
+// MessageConsumer is a generic interface for consumers
+type MessageConsumer interface {
+	Start()
+	Stop()
+	ConnectivityCheck() (string, error)
+}
+
 // Consumer provide methods to consume messages from a kafka proxy
 type Consumer struct {
 	streamCount int
@@ -28,7 +35,7 @@ type MessageProcessor interface {
 }
 
 // NewConsumer returns a new instance of a Consumer
-func NewConsumer(config QueueConfig, handler func(m Message), client http.Client) Consumer {
+func NewConsumer(config QueueConfig, handler func(m Message), client http.Client) MessageConsumer {
 	streamCount := 1
 	if config.StreamCount > 0 {
 		streamCount = config.StreamCount
@@ -38,11 +45,11 @@ func NewConsumer(config QueueConfig, handler func(m Message), client http.Client
 		consumers[i] = NewQueueConsumer(config, handler, client)
 	}
 
-	return Consumer{streamCount, consumers}
+	return &Consumer{streamCount, consumers}
 }
 
 // NewBatchedConsumer returns a Consumer to manage batches of messages
-func NewBatchedConsumer(config QueueConfig, handler func(m []Message), client http.Client) Consumer {
+func NewBatchedConsumer(config QueueConfig, handler func(m []Message), client http.Client) MessageConsumer {
 	streamCount := 1
 	if config.StreamCount > 0 {
 		streamCount = config.StreamCount
@@ -53,11 +60,11 @@ func NewBatchedConsumer(config QueueConfig, handler func(m []Message), client ht
 		consumers[i] = NewBatchedQueueConsumer(config, handler, client)
 	}
 
-	return Consumer{streamCount, consumers}
+	return &Consumer{streamCount, consumers}
 }
 
 // NewAgeingConsumer returns a new instance of a Consumer with an AgeingClient
-func NewAgeingConsumer(config QueueConfig, handler func(m Message), agingClient AgeingClient) Consumer {
+func NewAgeingConsumer(config QueueConfig, handler func(m Message), agingClient AgeingClient) MessageConsumer {
 	streamCount := 1
 	if config.StreamCount > 0 {
 		streamCount = config.StreamCount
@@ -68,7 +75,7 @@ func NewAgeingConsumer(config QueueConfig, handler func(m Message), agingClient 
 	}
 	agingClient.StartAgeingProcess()
 
-	return Consumer{streamCount, consumers}
+	return &Consumer{streamCount, consumers}
 }
 
 //Start method is the entry point to using the gonsumer library
