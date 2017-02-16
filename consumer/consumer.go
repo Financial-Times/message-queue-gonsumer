@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// MessageConsumer is a generic interface for consumers
+// MessageConsumer is a high level generic interface for consumers
 type MessageConsumer interface {
 	Start()
 	Stop()
