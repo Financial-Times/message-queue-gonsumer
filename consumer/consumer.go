@@ -93,7 +93,7 @@ func (c *Consumer) Stop() {
 }
 
 //ConnectivityCheck returns the connection status with the kafka proxy
-func (c Consumer) ConnectivityCheck() (string, error) {
+func (c *Consumer) ConnectivityCheck() (string, error) {
 	errMsg := ""
 	for _, consumer := range c.consumers {
 		if err := consumer.checkConnectivity(); err != nil {
