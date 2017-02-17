@@ -110,6 +110,7 @@ func (c *Consumer) ConnectivityCheck() (string, error) {
 	if errMsg == "" {
 		return "Connectivity to consumer proxies is OK.", nil
 	}
+	log.Printf("ERROR - Consumer Connectivity Check - %s", errMsg)
 	return "Error connecting to consumer proxies", errors.New(errMsg)
 }
 

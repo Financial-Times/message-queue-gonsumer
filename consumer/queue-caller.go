@@ -161,8 +161,7 @@ func (q *defaultQueueCaller) checkConnectivity() error {
 }
 
 func (q *defaultQueueCaller) checkMessageQueueProxyReachable(address string) error {
-
-	body, err := q.caller.DoReq("GET", address, nil, map[string]string{"Accept": "application/json"}, http.StatusOK)
+	body, err := q.caller.DoReq("GET", address+"/topics", nil, map[string]string{"Accept": "application/json"}, http.StatusOK)
 	if err != nil {
 		return errors.New("Could not connect to proxy: " + err.Error())
 	}
