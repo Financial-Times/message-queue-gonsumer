@@ -182,5 +182,5 @@ func checkIfTopicIsPresent(body []byte, searchedTopic string) error {
 		}
 	}
 
-	return errors.New("Topic was not found")
+	return fmt.Errorf(`Topic "%v" was not found`, searchedTopic)
 }

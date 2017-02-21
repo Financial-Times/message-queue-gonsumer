@@ -41,7 +41,7 @@ func TestHappyConnectivityCheck(t *testing.T) {
 	c := NewConsumer(consumerConfigMock, func(m Message) {}, http.Client{})
 	msg, err := c.ConnectivityCheck()
 
-	assert.Nil(t, err, "It should not return an error")
+	assert.NoError(t, err, "It should not return an error")
 	assert.Equal(t, "Connectivity to consumer proxies is OK.", msg, `The check message should be "Connectivity to consumer proxies is OK."`)
 }
 
@@ -73,7 +73,7 @@ func TestConnectivityCheckMissingTopic(t *testing.T) {
 	c := NewConsumer(consumerConfigMock, func(m Message) {}, http.Client{})
 	msg, err := c.ConnectivityCheck()
 
-	assert.EqualError(t, err, "Topic was not found; ", "It should return an error")
+	assert.EqualError(t, err, "Topic \"methode-articles\" was not found; ", "It should return an error")
 	assert.Equal(t, "Error connecting to consumer proxies", msg, `The check message should be "Error connecting to consumer proxies"`)
 }
 
@@ -89,7 +89,7 @@ func TestConnectivityCheckUnhappyKafkaAndMissingTopic(t *testing.T) {
 	c := NewConsumer(consumerConfigMock, func(m Message) {}, http.Client{})
 	msg, err := c.ConnectivityCheck()
 
-	assert.EqualError(t, err, "Topic was not found; Could not connect to proxy: Unexpected response status 500. Expected: 200; ", "It should return an error")
+	assert.EqualError(t, err, "Topic \"methode-articles\" was not found; Could not connect to proxy: Unexpected response status 500. Expected: 200; ", "It should return an error")
 	assert.Equal(t, "Error connecting to consumer proxies", msg, `The check message should be "Error connecting to consumer proxies"`)
 }
 
