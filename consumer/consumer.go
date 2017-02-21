@@ -15,7 +15,7 @@ type MessageConsumer interface {
 	ConnectivityCheck() (string, error)
 }
 
-// Consumer provide methods to consume messages from a kafka proxy
+// Consumer provides methods to consume messages from a kafka proxy
 type Consumer struct {
 	streamCount int
 	consumers   []QueueConsumer
@@ -78,8 +78,8 @@ func NewAgeingConsumer(config QueueConfig, handler func(m Message), agingClient 
 	return &Consumer{streamCount, consumers}
 }
 
-//Start method is the entry point to using the gonsumer library
-//It is a blocking function, it will return only when Stop() is called. If you don't want to block start it in a different goroutine.
+//Start is a method that triggers the consumption of messages from the queue
+//Start is a blocking methode, it will return only when Stop() is called. If you don't want to block start it in a different goroutine.
 func (c *Consumer) Start() {
 	var wg sync.WaitGroup
 	wg.Add(c.streamCount)
