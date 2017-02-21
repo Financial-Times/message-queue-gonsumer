@@ -130,7 +130,7 @@ type Message struct {
 	Body    string
 }
 
-//SplitMessageProcessor is
+//SplitMessageProcessor processes messages one by one
 type SplitMessageProcessor struct {
 	handler func(m Message)
 }
