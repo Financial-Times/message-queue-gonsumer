@@ -10,9 +10,9 @@ type QueueConfig struct {
 	BackoffPeriod        int      `json:"backoffPeriod"`
 	StreamCount          int      `json:"streamCount"`
 	ConcurrentProcessing bool     `json:"concurrentProcessing"`
-	AuthorizationKey     string
-	AutoCommitEnable     bool `json:"autoCommitEnable"`
-	NoOfProcessors       int
+	AuthorizationKey     string   `json:"authorizationKey"`
+	AutoCommitEnable     bool     `json:"autoCommitEnable"`
+	NoOfProcessors       int      `json:"noOfProcessors"`
 }
 
 type consumer struct {
