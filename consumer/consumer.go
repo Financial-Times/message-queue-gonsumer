@@ -8,7 +8,16 @@ import (
 	"time"
 )
 
-// MessageConsumer is a high level generic interface for consumers
+// MessageConsumer is a high level generic interface for consumers.
+//
+// Start triggers the consution of messages.
+//
+// Stop method stops the consuption of messages.
+//
+// ConnectivityCheck implements the logic to check the current
+// connectivity to the queue.
+// The method should return a message about the status of the connection and
+// an error in case of connectivity failure.
 type MessageConsumer interface {
 	Start()
 	Stop()
