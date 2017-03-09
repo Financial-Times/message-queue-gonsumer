@@ -7,7 +7,7 @@ import (
 )
 
 func TestBatchConsumer(t *testing.T) {
-	consumer := &DefaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, consumer: consInstTest, processor: BatchedMessageProcessor{func(m []Message) {
+	consumer := &defaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, consumer: consInstTest, processor: BatchedMessageProcessor{func(m []Message) {
 		assert.Equal(t, msgsTest, m)
 	}}}
 

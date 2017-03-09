@@ -38,7 +38,7 @@ func TestHappyConnectivityCheck(t *testing.T) {
 	defer proxy3.Close()
 
 	consumerConfigMock.Addrs = []string{proxy1.URL, proxy2.URL, proxy3.URL}
-	c := NewConsumer(consumerConfigMock, func(m Message) {}, http.Client{})
+	c := NewConsumer(consumerConfigMock, func(m Message) {}, &http.Client{})
 	msg, err := c.ConnectivityCheck()
 
 	assert.NoError(t, err, "It should not return an error")
@@ -54,7 +54,7 @@ func TestConnectivityCheckUnhappyKakfka(t *testing.T) {
 	defer proxy3.Close()
 
 	consumerConfigMock.Addrs = []string{proxy1.URL, proxy2.URL, proxy3.URL}
-	c := NewConsumer(consumerConfigMock, func(m Message) {}, http.Client{})
+	c := NewConsumer(consumerConfigMock, func(m Message) {}, &http.Client{})
 	msg, err := c.ConnectivityCheck()
 
 	assert.EqualError(t, err, "Could not connect to proxy: Unexpected response status 500. Expected: 200; ", "It should return an error")
@@ -70,7 +70,7 @@ func TestConnectivityCheckMissingTopic(t *testing.T) {
 	defer proxy3.Close()
 
 	consumerConfigMock.Addrs = []string{proxy1.URL, proxy2.URL, proxy3.URL}
-	c := NewConsumer(consumerConfigMock, func(m Message) {}, http.Client{})
+	c := NewConsumer(consumerConfigMock, func(m Message) {}, &http.Client{})
 	msg, err := c.ConnectivityCheck()
 
 	assert.EqualError(t, err, "Topic \"methode-articles\" was not found; ", "It should return an error")
@@ -86,7 +86,7 @@ func TestConnectivityCheckUnhappyKafkaAndMissingTopic(t *testing.T) {
 	defer proxy3.Close()
 
 	consumerConfigMock.Addrs = []string{proxy1.URL, proxy2.URL, proxy3.URL}
-	c := NewConsumer(consumerConfigMock, func(m Message) {}, http.Client{})
+	c := NewConsumer(consumerConfigMock, func(m Message) {}, &http.Client{})
 	msg, err := c.ConnectivityCheck()
 
 	assert.EqualError(t, err, "Topic \"methode-articles\" was not found; Could not connect to proxy: Unexpected response status 500. Expected: 200; ", "It should return an error")
@@ -100,7 +100,7 @@ func TestConnectivityCheckNoKafka(t *testing.T) {
 	defer proxy2.Close()
 
 	consumerConfigMock.Addrs = []string{proxy1.URL, proxy2.URL, "http://do.not.exist.com/"}
-	c := NewConsumer(consumerConfigMock, func(m Message) {}, http.Client{})
+	c := NewConsumer(consumerConfigMock, func(m Message) {}, &http.Client{})
 	msg, err := c.ConnectivityCheck()
 
 	assert.Error(t, err, "It should return an error")

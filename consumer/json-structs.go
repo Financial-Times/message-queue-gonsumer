@@ -5,7 +5,7 @@ type QueueConfig struct {
 	Addrs                []string `json:"address"` //list of queue addresses.
 	Group                string   `json:"group"`
 	Topic                string   `json:"topic"`
-	Queue                string   `json:"queue"` //The name of the queue. Leave it empty for requests to UCS kafka-proxy
+	Queue                string   `json:"queue"` //The name of the queue.
 	Offset               string   `json:"offset"`
 	BackoffPeriod        int      `json:"backoffPeriod"`
 	StreamCount          int      `json:"streamCount"`

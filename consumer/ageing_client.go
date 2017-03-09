@@ -8,7 +8,7 @@ import (
 
 //AgeingClient defines an ageing http client for consuming messages
 type AgeingClient struct {
-	Client http.Client
+	Client *http.Client
 	MaxAge time.Duration
 }
 

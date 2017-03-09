@@ -97,7 +97,7 @@ func (q *defaultQueueCaller) buildConsumerURL(c consumer) (uri *url.URL, err err
 type defaultHTTPCaller struct {
 	hostHeader       string
 	authorizationKey string
-	client           http.Client
+	client           *http.Client
 }
 
 func (caller defaultHTTPCaller) DoReq(method, url string, body io.Reader, headers map[string]string, expectedStatus int) (data []byte, err error) {
@@ -150,7 +150,7 @@ func (caller defaultHTTPCaller) DoReq(method, url string, body io.Reader, header
 func (q *defaultQueueCaller) checkConnectivity() error {
 	errMsg := ""
 	for _, address := range q.addrs {
-		if err := q.checkMessageQueueProxyReachable(address); err != nil {
+		if err := q.checkMessageTopicQueueReachable(address); err != nil {
 			errMsg = errMsg + err.Error() + "; "
 		}
 	}
@@ -160,7 +160,7 @@ func (q *defaultQueueCaller) checkConnectivity() error {
 	return nil
 }
 
-func (q *defaultQueueCaller) checkMessageQueueProxyReachable(address string) error {
+func (q *defaultQueueCaller) checkMessageTopicQueueReachable(address string) error {
 	body, err := q.caller.DoReq("GET", address+"/topics", nil, map[string]string{"Accept": "application/json"}, http.StatusOK)
 	if err != nil {
 		return errors.New("Could not connect to proxy: " + err.Error())

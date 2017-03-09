@@ -27,29 +27,27 @@ type MessageConsumer interface {
 // Consumer provides methods to consume messages from a kafka proxy
 type Consumer struct {
 	streamCount int
-	consumers   []QueueConsumer
+	consumers   []queueConsumer
 }
 
-// QueueConsumer specifies a generic queue consumer
-type QueueConsumer interface {
+type queueConsumer interface {
 	consumeWhileActive()
 	initiateShutdown()
 	shutdown()
 	checkConnectivity() error
 }
 
-// MessageProcessor defines a generic interface for message processors
-type MessageProcessor interface {
+type messageProcessor interface {
 	consume(messages ...Message)
 }
 
 // NewConsumer returns a new instance of a Consumer
-func NewConsumer(config QueueConfig, handler func(m Message), client http.Client) MessageConsumer {
+func NewConsumer(config QueueConfig, handler func(m Message), client *http.Client) MessageConsumer {
 	streamCount := 1
 	if config.StreamCount > 0 {
 		streamCount = config.StreamCount
 	}
-	consumers := make([]QueueConsumer, streamCount)
+	consumers := make([]queueConsumer, streamCount)
 	for i := 0; i < streamCount; i++ {
 		consumers[i] = NewQueueConsumer(config, handler, client)
 	}
@@ -58,13 +56,13 @@ func NewConsumer(config QueueConfig, handler func(m Message), client http.Client
 }
 
 // NewBatchedConsumer returns a Consumer to manage batches of messages
-func NewBatchedConsumer(config QueueConfig, handler func(m []Message), client http.Client) MessageConsumer {
+func NewBatchedConsumer(config QueueConfig, handler func(m []Message), client *http.Client) MessageConsumer {
 	streamCount := 1
 	if config.StreamCount > 0 {
 		streamCount = config.StreamCount
 	}
 
-	consumers := make([]QueueConsumer, streamCount)
+	consumers := make([]queueConsumer, streamCount)
 	for i := 0; i < streamCount; i++ {
 		consumers[i] = NewBatchedQueueConsumer(config, handler, client)
 	}
@@ -78,7 +76,7 @@ func NewAgeingConsumer(config QueueConfig, handler func(m Message), agingClient 
 	if config.StreamCount > 0 {
 		streamCount = config.StreamCount
 	}
-	consumers := make([]QueueConsumer, streamCount)
+	consumers := make([]queueConsumer, streamCount)
 	for i := 0; i < streamCount; i++ {
 		consumers[i] = NewQueueConsumer(config, handler, agingClient.Client)
 	}
@@ -93,7 +91,7 @@ func (c *Consumer) Start() {
 	var wg sync.WaitGroup
 	wg.Add(c.streamCount)
 	for _, consumer := range c.consumers {
-		go func(consumer QueueConsumer) {
+		go func(consumer queueConsumer) {
 			defer wg.Done()
 			consumer.consumeWhileActive()
 		}(consumer)
@@ -123,14 +121,14 @@ func (c *Consumer) ConnectivityCheck() (string, error) {
 	return "Error connecting to consumer proxies", errors.New(errMsg)
 }
 
-//DefaultQueueConsumer is the default implementation of the QueueConsumer interface.
-//NOTE: DefaultQueueConsumer is not thread-safe!
-type DefaultQueueConsumer struct {
+//defaultQueueConsumer is the default implementation of the QueueConsumer interface.
+//NOTE: defaultQueueConsumer is not thread-safe!
+type defaultQueueConsumer struct {
 	config       QueueConfig
 	queue        queueCaller
 	consumer     *consumer
 	shutdownChan chan bool
-	processor    MessageProcessor
+	processor    messageProcessor
 }
 
 //Message defines the consumed messages
@@ -140,12 +138,12 @@ type Message struct {
 }
 
 //SplitMessageProcessor processes messages one by one
-type SplitMessageProcessor struct {
+type splitMessageProcessor struct {
 	handler func(m Message)
 }
 
 //NewQueueConsumer returns a new instance of a QueueConsumer
-func NewQueueConsumer(config QueueConfig, handler func(m Message), client http.Client) QueueConsumer {
+func NewQueueConsumer(config QueueConfig, handler func(m Message), client *http.Client) queueConsumer {
 	offset := "largest"
 	if len(config.Offset) > 0 {
 		offset = config.Offset
@@ -158,10 +156,10 @@ func NewQueueConsumer(config QueueConfig, handler func(m Message), client http.C
 		autoCommitEnable: config.AutoCommitEnable,
 		caller:           defaultHTTPCaller{config.Queue, config.AuthorizationKey, client},
 	}
-	return &DefaultQueueConsumer{config, queue, nil, make(chan bool, 1), SplitMessageProcessor{handler}}
+	return &defaultQueueConsumer{config, queue, nil, make(chan bool, 1), splitMessageProcessor{handler}}
 }
 
-func (c *DefaultQueueConsumer) consumeWhileActive() {
+func (c *defaultQueueConsumer) consumeWhileActive() {
 	for {
 		select {
 		case <-c.shutdownChan:
@@ -173,7 +171,7 @@ func (c *DefaultQueueConsumer) consumeWhileActive() {
 	}
 }
 
-func (c *DefaultQueueConsumer) consumeAndHandleMessages() {
+func (c *defaultQueueConsumer) consumeAndHandleMessages() {
 	defer func() {
 		if r := recover(); r != nil {
 			var ok bool
@@ -194,13 +192,13 @@ func (c *DefaultQueueConsumer) consumeAndHandleMessages() {
 	}
 }
 
-func (p SplitMessageProcessor) consume(msgs ...Message) {
+func (p splitMessageProcessor) consume(msgs ...Message) {
 	for _, msg := range msgs {
 		p.handler(msg)
 	}
 }
 
-func (c *DefaultQueueConsumer) consume() ([]Message, error) {
+func (c *defaultQueueConsumer) consume() ([]Message, error) {
 	q := c.queue
 	if c.consumer == nil {
 		cInst, err := q.createConsumerInstance()
@@ -271,7 +269,7 @@ func (c *DefaultQueueConsumer) consume() ([]Message, error) {
 	return msgs, nil
 }
 
-func (c *DefaultQueueConsumer) shutdown() {
+func (c *defaultQueueConsumer) shutdown() {
 	if c.consumer != nil {
 		err := c.queue.destroyConsumerInstance(*c.consumer)
 		if err != nil {
@@ -280,10 +278,10 @@ func (c *DefaultQueueConsumer) shutdown() {
 	}
 }
 
-func (c *DefaultQueueConsumer) initiateShutdown() {
+func (c *defaultQueueConsumer) initiateShutdown() {
 	c.shutdownChan <- true
 }
 
-func (c *DefaultQueueConsumer) checkConnectivity() error {
+func (c *defaultQueueConsumer) checkConnectivity() error {
 	return c.queue.checkConnectivity()
 }
