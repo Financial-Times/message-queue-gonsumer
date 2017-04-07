@@ -10,25 +10,25 @@ import (
 func TestConsume(t *testing.T) {
 
 	var tests = []struct {
-		consumer *DefaultQueueConsumer
+		consumer *defaultQueueConsumer
 		expMsgs  []Message
 		expErr   error
 		expCons  *consumer //DefaultIterator's consumerInstance
 	}{
 		{
-			&DefaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, consumer: consInstTest, processor: SplitMessageProcessor{func(m Message) {}}},
+			&defaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, consumer: consInstTest, processor: splitMessageProcessor{func(m Message) {}}},
 			msgsTest,
 			nil,
 			consInstTest,
 		},
 		{
-			&DefaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, processor: SplitMessageProcessor{func(m Message) {}}},
+			&defaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, processor: splitMessageProcessor{func(m Message) {}}},
 			msgsTest,
 			nil,
 			consInstTest,
 		},
 		{
-			&DefaultQueueConsumer{config: QueueConfig{}, queue: consumeMsgErrorQueueCaller{}, consumer: consInstTest, processor: SplitMessageProcessor{func(m Message) {}}},
+			&defaultQueueConsumer{config: QueueConfig{}, queue: consumeMsgErrorQueueCaller{}, consumer: consInstTest, processor: splitMessageProcessor{func(m Message) {}}},
 			nil,
 			errors.New("Error while consuming"),
 			nil,
@@ -45,13 +45,13 @@ func TestConsume(t *testing.T) {
 }
 
 func TestConsumeAndHandleMessagesRecoversFromPanic(t *testing.T) {
-	c := DefaultQueueConsumer{config: QueueConfig{BackoffPeriod: 1}, queue: consumeMsgPanicQueueCaller{}, processor: SplitMessageProcessor{func(m Message) {}}}
+	c := defaultQueueConsumer{config: QueueConfig{BackoffPeriod: 1}, queue: consumeMsgPanicQueueCaller{}, processor: splitMessageProcessor{func(m Message) {}}}
 	c.consumeAndHandleMessages()
 }
 
 func TestConsumeWhileActiveTerminates(t *testing.T) {
 	sdChan := make(chan bool)
-	c := DefaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, shutdownChan: sdChan, processor: SplitMessageProcessor{func(m Message) {}}}
+	c := defaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, shutdownChan: sdChan, processor: splitMessageProcessor{func(m Message) {}}}
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -63,9 +63,9 @@ func TestConsumeWhileActiveTerminates(t *testing.T) {
 }
 
 func TestStartStop(t *testing.T) {
-	consumers := make([]QueueConsumer, 2)
+	consumers := make([]queueConsumer, 2)
 	for i := 0; i < 2; i++ {
-		consumers[i] = &DefaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, shutdownChan: make(chan bool), processor: SplitMessageProcessor{func(m Message) {}}}
+		consumers[i] = &defaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, shutdownChan: make(chan bool), processor: splitMessageProcessor{func(m Message) {}}}
 	}
 	c := Consumer{2, consumers}
 
@@ -115,6 +115,10 @@ func (qc defaultTestQueueCaller) commitOffsets(cInst consumer) error {
 	return nil
 }
 
+func (qc defaultTestQueueCaller) checkConnectivity() error {
+	return nil
+}
+
 //return error on consume and destroy
 type consumeMsgErrorQueueCaller struct {
 	qc defaultTestQueueCaller
@@ -136,6 +140,10 @@ func (qc consumeMsgErrorQueueCaller) commitOffsets(cInst consumer) error {
 	return errors.New("Error while commiting offsets")
 }
 
+func (qc consumeMsgErrorQueueCaller) checkConnectivity() error {
+	return errors.New("Connectivity error")
+}
+
 type consumeMsgPanicQueueCaller struct {
 	qc defaultTestQueueCaller
 }
@@ -154,4 +162,8 @@ func (qc consumeMsgPanicQueueCaller) consumeMessages(cInst consumer) ([]Message,
 
 func (qc consumeMsgPanicQueueCaller) commitOffsets(cInst consumer) error {
 	return errors.New("Error while commiting offsets")
+}
+
+func (qc consumeMsgPanicQueueCaller) checkConnectivity() error {
+	return errors.New("Connectivity error")
 }

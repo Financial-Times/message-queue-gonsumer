@@ -1,12 +1,11 @@
-#message-queue-gonsumer
+# message-queue-gonsumer
 
 [![GoDoc](https://godoc.org/github.com/Financial-Times/message-queue-gonsumer/consumer?status.svg)](https://godoc.org/github.com/Financial-Times/message-queue-gonsumer/consumer)
-
-[![Circle CI](https://circleci.com/gh/Financial-Times/message-queue-gonsumer.svg?style=shield)](https://circleci.com/gh/Financial-Times/message-queue-gonsumer/tree/master)
+[![Circle CI](https://circleci.com/gh/Financial-Times/message-queue-gonsumer.svg?style=shield)](https://circleci.com/gh/Financial-Times/message-queue-gonsumer/tree/master) [![Go Report Card](https://goreportcard.com/badge/github.com/Financial-Times/message-queue-gonsumer)](https://goreportcard.com/report/github.com/Financial-Times/message-queue-gonsumer) [![codecov](https://codecov.io/gh/Financial-Times/message-queue-gonsumer/branch/master/graph/badge.svg)](https://codecov.io/gh/Financial-Times/message-queue-gonsumer)
 
 Go implementation of https://github.com/Financial-Times/message-queue-consumer library
 
-###Usage
+### Usage
 
 `go get github.com/Financial-Times/message-queue-gonsumer/consumer`
 
@@ -37,7 +36,7 @@ go c.Start()
 c.Stop()
 ```
 
-###ToDo
+### ToDo
 
 1. More tests
 2. Healthcheck

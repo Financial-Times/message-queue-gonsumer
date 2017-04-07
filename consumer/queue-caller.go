@@ -2,6 +2,7 @@ package consumer
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -17,6 +18,7 @@ type queueCaller interface {
 	consumeMessages(c consumer) ([]Message, error)
 	destroyConsumerInstance(c consumer) error
 	commitOffsets(c consumer) error
+	checkConnectivity() error
 }
 
 type defaultQueueCaller struct {
@@ -94,7 +96,7 @@ func (q *defaultQueueCaller) buildConsumerURL(c consumer) (uri *url.URL, err err
 
 type defaultHTTPCaller struct {
 	authorizationKey string
-	client           http.Client
+	client           *http.Client
 }
 
 func (caller defaultHTTPCaller) DoReq(method, url string, body io.Reader, headers map[string]string, expectedStatus int) (data []byte, err error) {
@@ -133,10 +135,48 @@ func (caller defaultHTTPCaller) DoReq(method, url string, body io.Reader, header
 	}()
 
 	if resp.StatusCode != expectedStatus {
-		err = fmt.Errorf("Unexpected response status %d. Expected: %d.", resp.StatusCode, expectedStatus)
+		err = fmt.Errorf("Unexpected response status %d. Expected: %d", resp.StatusCode, expectedStatus)
 		log.Printf("ERROR - %s", err.Error())
 		return
 	}
 
 	return ioutil.ReadAll(resp.Body)
+}
+
+func (q *defaultQueueCaller) checkConnectivity() error {
+	errMsg := ""
+	for _, address := range q.addrs {
+		if err := q.checkMessageTopicQueueReachable(address); err != nil {
+			errMsg = errMsg + err.Error() + "; "
+		}
+	}
+	if errMsg != "" {
+		return errors.New(errMsg)
+	}
+	return nil
+}
+
+func (q *defaultQueueCaller) checkMessageTopicQueueReachable(address string) error {
+	body, err := q.caller.DoReq("GET", address+"/topics", nil, map[string]string{"Accept": "application/json"}, http.StatusOK)
+	if err != nil {
+		return errors.New("Could not connect to proxy: " + err.Error())
+	}
+	return checkIfTopicIsPresent(body, q.topic)
+}
+
+func checkIfTopicIsPresent(body []byte, searchedTopic string) error {
+	var topics []string
+
+	err := json.Unmarshal(body, &topics)
+	if err != nil {
+		return fmt.Errorf("Error occurred and topic could not be found. %v", err.Error())
+	}
+
+	for _, topic := range topics {
+		if topic == searchedTopic {
+			return nil
+		}
+	}
+
+	return fmt.Errorf(`Topic "%v" was not found`, searchedTopic)
 }
