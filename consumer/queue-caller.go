@@ -146,7 +146,7 @@ func (caller defaultHTTPCaller) DoReq(method, url string, body io.Reader, header
 func (q *defaultQueueCaller) checkConnectivity() error {
 	errMsg := ""
 	for _, address := range q.addrs {
-		if err := q.checkMessageTopicQueueReachable(address); err != nil {
+		if err := q.checkMessageQueueProxyReachable(address); err != nil {
 			errMsg = errMsg + err.Error() + "; "
 		}
 	}
@@ -156,27 +156,10 @@ func (q *defaultQueueCaller) checkConnectivity() error {
 	return nil
 }
 
-func (q *defaultQueueCaller) checkMessageTopicQueueReachable(address string) error {
-	body, err := q.caller.DoReq("GET", address+"/topics", nil, map[string]string{"Accept": "application/json"}, http.StatusOK)
+func (q *defaultQueueCaller) checkMessageQueueProxyReachable(address string) error {
+	_, err := q.caller.DoReq("GET", address+"/topics", nil, map[string]string{"Accept": "application/json"}, http.StatusOK)
 	if err != nil {
 		return errors.New("Could not connect to proxy: " + err.Error())
 	}
-	return checkIfTopicIsPresent(body, q.topic)
-}
-
-func checkIfTopicIsPresent(body []byte, searchedTopic string) error {
-	var topics []string
-
-	err := json.Unmarshal(body, &topics)
-	if err != nil {
-		return fmt.Errorf("Error occurred and topic could not be found. %v", err.Error())
-	}
-
-	for _, topic := range topics {
-		if topic == searchedTopic {
-			return nil
-		}
-	}
-
-	return fmt.Errorf(`Topic "%v" was not found`, searchedTopic)
+	return nil
 }

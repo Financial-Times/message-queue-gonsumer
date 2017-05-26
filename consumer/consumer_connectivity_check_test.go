@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const mockedTopics = `["methode-articles","up-placholders"]`
+const mockedTopics = `["methode-articles","up-placeholders"]`
 
 var consumerConfigMock = QueueConfig{
 	Group:            "mcpm-group",
@@ -57,38 +57,6 @@ func TestConnectivityCheckUnhappyKakfka(t *testing.T) {
 	msg, err := c.ConnectivityCheck()
 
 	assert.EqualError(t, err, "Could not connect to proxy: Unexpected response status 500. Expected: 200; ", "It should return an error")
-	assert.Equal(t, "Error connecting to consumer proxies", msg, `The check message should be "Error connecting to consumer proxies"`)
-}
-
-func TestConnectivityCheckMissingTopic(t *testing.T) {
-	proxy1 := setupMockKafka(t, 200, mockedTopics)
-	defer proxy1.Close()
-	proxy2 := setupMockKafka(t, 200, `["none-of-your-business"]`)
-	defer proxy2.Close()
-	proxy3 := setupMockKafka(t, 200, mockedTopics)
-	defer proxy3.Close()
-
-	consumerConfigMock.Addrs = []string{proxy1.URL, proxy2.URL, proxy3.URL}
-	c := NewConsumer(consumerConfigMock, func(m Message) {}, &http.Client{})
-	msg, err := c.ConnectivityCheck()
-
-	assert.EqualError(t, err, "Topic \"methode-articles\" was not found; ", "It should return an error")
-	assert.Equal(t, "Error connecting to consumer proxies", msg, `The check message should be "Error connecting to consumer proxies"`)
-}
-
-func TestConnectivityCheckUnhappyKafkaAndMissingTopic(t *testing.T) {
-	proxy1 := setupMockKafka(t, 200, mockedTopics)
-	defer proxy1.Close()
-	proxy2 := setupMockKafka(t, 200, `["none-of-your-business"]`)
-	defer proxy2.Close()
-	proxy3 := setupMockKafka(t, 500, "")
-	defer proxy3.Close()
-
-	consumerConfigMock.Addrs = []string{proxy1.URL, proxy2.URL, proxy3.URL}
-	c := NewConsumer(consumerConfigMock, func(m Message) {}, &http.Client{})
-	msg, err := c.ConnectivityCheck()
-
-	assert.EqualError(t, err, "Topic \"methode-articles\" was not found; Could not connect to proxy: Unexpected response status 500. Expected: 200; ", "It should return an error")
 	assert.Equal(t, "Error connecting to consumer proxies", msg, `The check message should be "Error connecting to consumer proxies"`)
 }
 
