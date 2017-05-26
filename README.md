@@ -1,7 +1,7 @@
 # message-queue-gonsumer
 
 [![GoDoc](https://godoc.org/github.com/Financial-Times/message-queue-gonsumer/consumer?status.svg)](https://godoc.org/github.com/Financial-Times/message-queue-gonsumer/consumer)
-[![Circle CI](https://circleci.com/gh/Financial-Times/message-queue-gonsumer.svg?style=shield)](https://circleci.com/gh/Financial-Times/message-queue-gonsumer/tree/master) [![Go Report Card](https://goreportcard.com/badge/github.com/Financial-Times/message-queue-gonsumer)](https://goreportcard.com/report/github.com/Financial-Times/message-queue-gonsumer) [![codecov](https://codecov.io/gh/Financial-Times/message-queue-gonsumer/branch/master/graph/badge.svg)](https://codecov.io/gh/Financial-Times/message-queue-gonsumer)
+[![Circle CI](https://circleci.com/gh/Financial-Times/message-queue-gonsumer.svg?style=shield)](https://circleci.com/gh/Financial-Times/message-queue-gonsumer/tree/master) [![Go Report Card](https://goreportcard.com/badge/github.com/Financial-Times/message-queue-gonsumer)](https://goreportcard.com/report/github.com/Financial-Times/message-queue-gonsumer) [![Coverage Status](https://coveralls.io/repos/github/Financial-Times/message-queue-gonsumer/badge.svg)](https://coveralls.io/github/Financial-Times/message-queue-gonsumer)
 
 Go implementation of https://github.com/Financial-Times/message-queue-consumer library
 
