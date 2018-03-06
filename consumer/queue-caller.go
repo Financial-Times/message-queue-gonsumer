@@ -13,6 +13,8 @@ import (
 	"strings"
 )
 
+var ErrNoQueueAddresses = errors.New("no kafka-rest-proxy addresses configured")
+
 type queueCaller interface {
 	createConsumerInstance() (consumer, error)
 	consumeMessages(c consumer) ([]Message, error)
@@ -148,6 +150,10 @@ func (caller defaultHTTPCaller) DoReq(method, url string, body io.Reader, header
 }
 
 func (q *defaultQueueCaller) checkConnectivity() error {
+	if len(q.addrs) == 0 {
+		return ErrNoQueueAddresses
+	}
+
 	errMsg := ""
 	for _, address := range q.addrs {
 		if err := q.checkMessageQueueProxyReachable(address); err != nil {
