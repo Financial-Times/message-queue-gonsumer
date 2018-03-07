@@ -4,6 +4,8 @@ import (
 	"io"
 	"net/url"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBuildConsumerURL(t *testing.T) {
@@ -102,4 +104,11 @@ type testHTTPCaller struct {
 func (t testHTTPCaller) DoReq(method, addr string, body io.Reader, headers map[string]string, expectedStatus int) ([]byte, error) {
 	_, err := url.Parse(addr)
 	return []byte("{}"), err
+}
+
+func TestNoQueueAddressesFails(t *testing.T) {
+	q := defaultQueueCaller{}
+	err := q.checkConnectivity()
+
+	assert.EqualError(t, err, ErrNoQueueAddresses.Error())
 }
