@@ -69,10 +69,10 @@ func getHeaderSectionEndingIndex(msg string) int {
 	return len(msg)
 }
 
-var re = regexp.MustCompile("[\\w-]*:[\\w\\-:/. ]*")
+var re = regexp.MustCompile("[\\w-]*:[\\w\\-:/.+;= ]*")
 
 var kre = regexp.MustCompile("[\\w-]*:")
-var vre = regexp.MustCompile(":[\\w-:/. ]*")
+var vre = regexp.MustCompile(":[\\w-:/.+;= ]*")
 
 func parseHeaders(msg string) (map[string]string, error) {
 	headerLines := re.FindAllString(msg, -1)
