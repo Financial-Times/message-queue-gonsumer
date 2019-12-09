@@ -126,7 +126,13 @@ func (q *defaultQueueCaller) commitOffsets(c consumer) (err error) {
 }
 
 func (q *defaultQueueCaller) buildConsumerURL(c consumer) (uri *url.URL, err error) {
-	uri, err = url.Parse(c.BaseURI)
+	// In some cases the REST proxy returns encoded symbols in the URL
+	baseURI, err := url.QueryUnescape(c.BaseURI)
+	if err != nil {
+		return nil, fmt.Errorf("unsupported base URI value: %w", err)
+	}
+
+	uri, err = url.Parse(baseURI)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing base URI: %w", err)
 	}

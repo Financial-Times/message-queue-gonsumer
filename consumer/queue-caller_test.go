@@ -47,6 +47,17 @@ func TestBuildConsumerURL(t *testing.T) {
 			},
 			"http://kafka-proxy-2.prod.ft.com/consumers/group1/instances/rest-consumer-1-45864",
 		},
+		{
+			consumer{
+				BaseURI:    "http://kafka-rest%3A8080/consumers/group1/instances/rest-consumer-1-45864",
+				InstanceID: "rest-consumer-1-45864",
+			},
+			defaultQueueCaller{
+				addrs:   []string{"https://kafka-rest-proxy"},
+				addrInd: 0,
+			},
+			"https://kafka-rest-proxy/consumers/group1/instances/rest-consumer-1-45864",
+		},
 	}
 
 	for _, test := range tests {
@@ -94,8 +105,8 @@ func TestCreateConsumerInstance_queueAddressesAreChangedInRoundRobinFashion(t *t
 }
 
 var testConsumer = consumer{
-	"http://kafka/consumers/group1/instances/rest-consumer-1-45864",
-	"rest-consumer-1-45864",
+	BaseURI:    "http://kafka/consumers/group1/instances/rest-consumer-1-45864",
+	InstanceID: "rest-consumer-1-45864",
 }
 
 type testHTTPCaller struct {
