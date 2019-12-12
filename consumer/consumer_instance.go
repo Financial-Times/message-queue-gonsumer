@@ -26,7 +26,7 @@ func NewConsumerInstance(config QueueConfig, handler func(m Message), client *ht
 		topic:            config.Topic,
 		offset:           offset,
 		autoCommitEnable: config.AutoCommitEnable,
-		caller:           defaultHTTPCaller{config.Queue, config.AuthorizationKey, client},
+		caller:           httpClient{config.Queue, config.AuthorizationKey, client},
 	}
 	return &consumerInstance{
 		config:       config,

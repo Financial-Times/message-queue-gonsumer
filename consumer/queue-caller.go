@@ -136,13 +136,13 @@ func (q *defaultQueueCaller) buildConsumerURL(c consumer) (uri *url.URL, err err
 	return addrURL, nil
 }
 
-type defaultHTTPCaller struct {
+type httpClient struct {
 	hostHeader       string
 	authorizationKey string
 	client           *http.Client
 }
 
-func (caller defaultHTTPCaller) DoReq(method, url string, body io.Reader, headers map[string]string, expectedStatus int) (data []byte, err error) {
+func (c httpClient) DoReq(method, url string, body io.Reader, headers map[string]string, expectedStatus int) (data []byte, err error) {
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
@@ -151,15 +151,15 @@ func (caller defaultHTTPCaller) DoReq(method, url string, body io.Reader, header
 	for k, v := range headers {
 		req.Header.Add(k, v)
 	}
-	if len(caller.hostHeader) > 0 {
-		req.Host = caller.hostHeader
+	if len(c.hostHeader) > 0 {
+		req.Host = c.hostHeader
 	}
 
-	if len(caller.authorizationKey) > 0 {
-		req.Header.Add("Authorization", caller.authorizationKey)
+	if len(c.authorizationKey) > 0 {
+		req.Header.Add("Authorization", c.authorizationKey)
 	}
 
-	resp, err := caller.client.Do(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error executing request: %w", err)
 	}
@@ -172,7 +172,7 @@ func (caller defaultHTTPCaller) DoReq(method, url string, body io.Reader, header
 			// of the DNS pool, but because we might still have a tcp connection open, we'll
 			// never re-do the DNS lookup and get a connection to a working server.  So when we
 			// get 5xx, close idle connections to force the next requests to re-connect.
-			if t, ok := caller.client.Transport.(*http.Transport); ok {
+			if t, ok := c.client.Transport.(*http.Transport); ok {
 				t.CloseIdleConnections()
 			}
 		}
