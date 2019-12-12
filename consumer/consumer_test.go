@@ -5,9 +5,12 @@ import (
 	"reflect"
 	"sync"
 	"testing"
+
+	log "github.com/Financial-Times/go-logger/v2"
 )
 
 func TestConsume(t *testing.T) {
+	logger := log.NewUPPLogger("Test", "FATAL")
 
 	var tests = []struct {
 		consumer *defaultQueueConsumer
@@ -16,19 +19,25 @@ func TestConsume(t *testing.T) {
 		expCons  *consumer //DefaultIterator's consumerInstance
 	}{
 		{
-			&defaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, consumer: consInstTest, processor: splitMessageProcessor{func(m Message) {}}},
+			&defaultQueueConsumer{
+				config: QueueConfig{}, queue: defaultTestQueueCaller{}, consumer: consInstTest,
+				processor: splitMessageProcessor{func(m Message) {}}, logger: logger},
 			msgsTest,
 			nil,
 			consInstTest,
 		},
 		{
-			&defaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, processor: splitMessageProcessor{func(m Message) {}}},
+			&defaultQueueConsumer{
+				config: QueueConfig{}, queue: defaultTestQueueCaller{},
+				processor: splitMessageProcessor{func(m Message) {}}, logger: logger},
 			msgsTest,
 			nil,
 			consInstTest,
 		},
 		{
-			&defaultQueueConsumer{config: QueueConfig{}, queue: consumeMsgErrorQueueCaller{}, consumer: consInstTest, processor: splitMessageProcessor{func(m Message) {}}},
+			&defaultQueueConsumer{
+				config: QueueConfig{}, queue: consumeMsgErrorQueueCaller{}, consumer: consInstTest,
+				processor: splitMessageProcessor{func(m Message) {}}, logger: logger},
 			nil,
 			errors.New("Error while consuming"),
 			nil,
@@ -81,6 +90,7 @@ func TestStartStop(t *testing.T) {
 }
 
 var consInstTest = &consumer{"/queue/consumergroup/instance-d", "/instance-id"}
+var msgsTestByteA = []byte(`[{"value":"RlRNU0cvMS4wCgpib2R5Cg==","partition":0,"offset":0},{"value":"TWVzc2FnZS1JZDogMDAwMC0xMTExLTAwMDAtYWJjZAoKW10K","partition":0,"offset":1}]`)
 var msgsTest = []Message{Message{nil, "body"}, Message{map[string]string{"Message-Id": "0000-1111-0000-abcd"}, "[]"}}
 
 //test queueCaller implementations
@@ -115,11 +125,11 @@ func (qc defaultTestQueueCaller) destroyConsumerInstanceSubscription(cInst consu
 	return nil
 }
 
-func (qc defaultTestQueueCaller) consumeMessages(cInst consumer) ([]Message, error) {
+func (qc defaultTestQueueCaller) consumeMessages(cInst consumer) ([]byte, error) {
 	if len(cInst.BaseURI) == 0 && len(cInst.InstanceID) == 0 {
 		return nil, errors.New("consumer instance is nil")
 	}
-	return msgsTest, nil
+	return msgsTestByteA, nil
 }
 
 func (qc defaultTestQueueCaller) commitOffsets(cInst consumer) error {
@@ -154,7 +164,7 @@ func (qc consumeMsgErrorQueueCaller) destroyConsumerInstanceSubscription(cInst c
 	return errors.New("Error while destroying subscription")
 }
 
-func (qc consumeMsgErrorQueueCaller) consumeMessages(cInst consumer) ([]Message, error) {
+func (qc consumeMsgErrorQueueCaller) consumeMessages(cInst consumer) ([]byte, error) {
 	return nil, errors.New("Error while consuming")
 }
 
@@ -186,7 +196,7 @@ func (qc consumeMsgPanicQueueCaller) destroyConsumerInstanceSubscription(cInst c
 	return errors.New("Error while destroying subscription")
 }
 
-func (qc consumeMsgPanicQueueCaller) consumeMessages(cInst consumer) ([]Message, error) {
+func (qc consumeMsgPanicQueueCaller) consumeMessages(cInst consumer) ([]byte, error) {
 	return nil, errors.New("Error while consuming")
 }
 

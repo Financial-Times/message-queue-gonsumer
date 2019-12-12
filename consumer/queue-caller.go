@@ -21,7 +21,7 @@ type queueCaller interface {
 	destroyConsumerInstance(c consumer) error
 	subscribeConsumerInstance(c consumer) error
 	destroyConsumerInstanceSubscription(c consumer) error
-	consumeMessages(c consumer) ([]Message, error)
+	consumeMessages(c consumer) ([]byte, error)
 	commitOffsets(c consumer) error
 	checkConnectivity() error
 }
@@ -98,7 +98,7 @@ func (q *defaultQueueCaller) destroyConsumerInstanceSubscription(c consumer) (er
 	return err
 }
 
-func (q *defaultQueueCaller) consumeMessages(c consumer) ([]Message, error) {
+func (q *defaultQueueCaller) consumeMessages(c consumer) ([]byte, error) {
 	uri, err := q.buildConsumerURL(c)
 	if err != nil {
 		return nil, fmt.Errorf("error building consumer URL: %w", err)
@@ -110,7 +110,7 @@ func (q *defaultQueueCaller) consumeMessages(c consumer) ([]Message, error) {
 		return nil, err
 	}
 
-	return parseResponse(data)
+	return data, nil
 }
 
 func (q *defaultQueueCaller) commitOffsets(c consumer) (err error) {

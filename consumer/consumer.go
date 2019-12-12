@@ -2,10 +2,11 @@ package consumer
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"sync"
 	"time"
+
+	log "github.com/Financial-Times/go-logger/v2"
 )
 
 // MessageConsumer is a high level generic interface for consumers.
@@ -24,12 +25,6 @@ type MessageConsumer interface {
 	ConnectivityCheck() (string, error)
 }
 
-// Consumer provides methods to consume messages from a kafka proxy
-type Consumer struct {
-	streamCount int
-	consumers   []queueConsumer
-}
-
 type queueConsumer interface {
 	consumeWhileActive()
 	initiateShutdown()
@@ -42,21 +37,21 @@ type messageProcessor interface {
 }
 
 // NewConsumer returns a new instance of a Consumer
-func NewConsumer(config QueueConfig, handler func(m Message), client *http.Client) MessageConsumer {
+func NewConsumer(config QueueConfig, handler func(m Message), client *http.Client, logger *log.UPPLogger) MessageConsumer {
 	streamCount := 1
 	if config.StreamCount > 0 {
 		streamCount = config.StreamCount
 	}
 	consumers := make([]queueConsumer, streamCount)
 	for i := 0; i < streamCount; i++ {
-		consumers[i] = NewQueueConsumer(config, handler, client)
+		consumers[i] = NewQueueConsumer(config, handler, client, logger)
 	}
 
 	return &Consumer{streamCount, consumers}
 }
 
 // NewBatchedConsumer returns a Consumer to manage batches of messages
-func NewBatchedConsumer(config QueueConfig, handler func(m []Message), client *http.Client) MessageConsumer {
+func NewBatchedConsumer(config QueueConfig, handler func(m []Message), client *http.Client, logger *log.UPPLogger) MessageConsumer {
 	streamCount := 1
 	if config.StreamCount > 0 {
 		streamCount = config.StreamCount
@@ -64,25 +59,31 @@ func NewBatchedConsumer(config QueueConfig, handler func(m []Message), client *h
 
 	consumers := make([]queueConsumer, streamCount)
 	for i := 0; i < streamCount; i++ {
-		consumers[i] = NewBatchedQueueConsumer(config, handler, client)
+		consumers[i] = NewBatchedQueueConsumer(config, handler, client, logger)
 	}
 
 	return &Consumer{streamCount, consumers}
 }
 
 // NewAgeingConsumer returns a new instance of a Consumer with an AgeingClient
-func NewAgeingConsumer(config QueueConfig, handler func(m Message), agingClient AgeingClient) MessageConsumer {
+func NewAgeingConsumer(config QueueConfig, handler func(m Message), agingClient AgeingClient, logger *log.UPPLogger) MessageConsumer {
 	streamCount := 1
 	if config.StreamCount > 0 {
 		streamCount = config.StreamCount
 	}
 	consumers := make([]queueConsumer, streamCount)
 	for i := 0; i < streamCount; i++ {
-		consumers[i] = NewQueueConsumer(config, handler, agingClient.Client)
+		consumers[i] = NewQueueConsumer(config, handler, agingClient.Client, logger)
 	}
 	agingClient.StartAgeingProcess()
 
 	return &Consumer{streamCount, consumers}
+}
+
+// Consumer provides methods to consume messages from a kafka proxy
+type Consumer struct {
+	streamCount int
+	consumers   []queueConsumer
 }
 
 //Start is a method that triggers the consumption of messages from the queue
@@ -117,18 +118,8 @@ func (c *Consumer) ConnectivityCheck() (string, error) {
 	if errMsg == "" {
 		return "Connectivity to consumer proxies is OK.", nil
 	}
-	log.Printf("ERROR - Consumer Connectivity Check - %s", errMsg)
-	return "Error connecting to consumer proxies", errors.New(errMsg)
-}
 
-//defaultQueueConsumer is the default implementation of the QueueConsumer interface.
-//NOTE: defaultQueueConsumer is not thread-safe!
-type defaultQueueConsumer struct {
-	config       QueueConfig
-	queue        queueCaller
-	consumer     *consumer
-	shutdownChan chan bool
-	processor    messageProcessor
+	return "Error connecting to consumer proxies", errors.New(errMsg)
 }
 
 //Message defines the consumed messages
@@ -155,7 +146,7 @@ var offsetResetOptions = map[string]bool{
 }
 
 //NewQueueConsumer returns a new instance of a QueueConsumer
-func NewQueueConsumer(config QueueConfig, handler func(m Message), client *http.Client) queueConsumer {
+func NewQueueConsumer(config QueueConfig, handler func(m Message), client *http.Client, logger *log.UPPLogger) queueConsumer {
 	offset := "latest"
 	if offsetResetOptions[config.Offset] {
 		offset = config.Offset
@@ -168,7 +159,25 @@ func NewQueueConsumer(config QueueConfig, handler func(m Message), client *http.
 		autoCommitEnable: config.AutoCommitEnable,
 		caller:           defaultHTTPCaller{config.Queue, config.AuthorizationKey, client},
 	}
-	return &defaultQueueConsumer{config, queue, nil, make(chan bool, 1), splitMessageProcessor{handler}}
+	return &defaultQueueConsumer{
+		config:       config,
+		queue:        queue,
+		consumer:     nil,
+		shutdownChan: make(chan bool, 1),
+		processor:    splitMessageProcessor{handler},
+		logger:       logger,
+	}
+}
+
+//defaultQueueConsumer is the default implementation of the QueueConsumer interface.
+//NOTE: defaultQueueConsumer is not thread-safe!
+type defaultQueueConsumer struct {
+	config       QueueConfig
+	queue        queueCaller
+	consumer     *consumer
+	shutdownChan chan bool
+	processor    messageProcessor
+	logger       *log.UPPLogger
 }
 
 func (c *defaultQueueConsumer) consumeWhileActive() {
@@ -186,10 +195,9 @@ func (c *defaultQueueConsumer) consumeWhileActive() {
 func (c *defaultQueueConsumer) consumeAndHandleMessages() {
 	defer func() {
 		if r := recover(); r != nil {
-			var ok bool
-			_, ok = r.(error)
+			err, ok := r.(error)
 			if !ok {
-				log.Printf("Error: recovered from panic: %v", r)
+				c.logger.WithError(err).Error("Recovered from panic")
 			}
 		}
 	}()
@@ -209,23 +217,30 @@ func (c *defaultQueueConsumer) consume() ([]Message, error) {
 	if c.consumer == nil {
 		cInst, err := q.createConsumerInstance()
 		if err != nil {
-			log.Printf("ERROR - creating consumer instance: %s", err.Error())
+			c.logger.WithError(err).Error("Error creating consumer instance")
 			return nil, err
 		}
 		c.consumer = &cInst
 
 		err = q.subscribeConsumerInstance(*c.consumer)
 		if err != nil {
-			log.Printf("ERROR - subscribing consumer instance to topic: %s", err.Error())
+			c.logger.WithError(err).Error("Error subscribing consumer instance to topic")
 
 			c.shutdown()
 			return nil, err
 		}
 	}
 
-	msgs, err := q.consumeMessages(*c.consumer)
+	res, err := q.consumeMessages(*c.consumer)
 	if err != nil {
-		log.Printf("ERROR - consuming messages: %s", err.Error())
+		c.logger.WithError(err).Error("Error consuming messages")
+
+		c.shutdown()
+		return nil, err
+	}
+	msgs, err := parseResponse(res, c.logger)
+	if err != nil {
+		c.logger.WithError(err).Error("Error parsing messages")
 
 		c.shutdown()
 		return nil, err
@@ -267,7 +282,7 @@ func (c *defaultQueueConsumer) consume() ([]Message, error) {
 	if c.config.AutoCommitEnable == false {
 		err = q.commitOffsets(*c.consumer)
 		if err != nil {
-			log.Printf("ERROR -  commiting offsets: %s", err.Error())
+			c.logger.WithError(err).Error("Error commiting offsets")
 
 			c.shutdown()
 			return nil, err
@@ -281,11 +296,11 @@ func (c *defaultQueueConsumer) shutdown() {
 	if c.consumer != nil {
 		err := c.queue.destroyConsumerInstanceSubscription(*c.consumer)
 		if err != nil {
-			log.Printf("ERROR - deleting consumer instance subscription: %s", err.Error())
+			c.logger.WithError(err).Error("Error deleting consumer instance subscription")
 		}
 		err = c.queue.destroyConsumerInstance(*c.consumer)
 		if err != nil {
-			log.Printf("ERROR - deleting consumer instance: %s", err.Error())
+			c.logger.WithError(err).Error("Error deleting consumer instance")
 		}
 
 		c.consumer = nil

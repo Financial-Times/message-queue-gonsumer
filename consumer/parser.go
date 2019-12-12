@@ -3,9 +3,12 @@ package consumer
 import (
 	"encoding/base64"
 	"encoding/json"
-	"log"
+	"errors"
+	"fmt"
 	"regexp"
 	"strings"
+
+	log "github.com/Financial-Times/go-logger/v2"
 )
 
 //raw message
@@ -15,21 +18,20 @@ type message struct {
 	Offset    int    `json:"offset"`
 }
 
-func parseResponse(data []byte) ([]Message, error) {
+func parseResponse(data []byte, logger *log.UPPLogger) ([]Message, error) {
 	var resp []message
 	err := json.Unmarshal(data, &resp)
 	if err != nil {
-		log.Printf("ERROR - parsing json message %q failed with error %v", data, err.Error())
-		return nil, err
+		return nil, fmt.Errorf("error parsing json message %q: %w", data, err)
 	}
 	var msgs []Message
 	for _, m := range resp {
-		//log.Printf("DEBUG - parsing msg of partition %d and offset %d", m.Partition, m.Offset)
-		if msg, err := parseMessage(m.Value); err == nil {
+		if msg, err := parseMessage(m.Value, logger); err == nil {
 			msgs = append(msgs, msg)
-		} else {
-			log.Printf("ERROR - parsing message %v", err.Error())
+			continue
 		}
+
+		logger.WithError(err).Error("Error parsing message")
 	}
 	return msgs, nil
 }
@@ -40,33 +42,35 @@ func parseResponse(data []byte) ([]Message, error) {
 // *(message-header CRLF)
 // CRLF
 // message-body
-func parseMessage(raw string) (m Message, err error) {
+func parseMessage(raw string, logger *log.UPPLogger) (m Message, err error) {
 	decoded, err := base64.StdEncoding.DecodeString(raw)
 	if err != nil {
-		log.Printf("ERROR - failure in decoding base64 value: %s", err.Error())
-		return
+		return Message{}, fmt.Errorf("error decoding base64 value: %w", err)
 	}
-	doubleNewLineStartIndex := getHeaderSectionEndingIndex(string(decoded[:]))
-	if m.Headers, err = parseHeaders(string(decoded[:doubleNewLineStartIndex])); err != nil {
-		return
+	doubleNewLineStartIndex, err := getHeaderSectionEndingIndex(string(decoded[:]))
+	if err != nil {
+		doubleNewLineStartIndex = len(decoded)
+		logger.WithError(err).Warn("message with no message body")
 	}
+
+	m.Headers = parseHeaders(string(decoded[:doubleNewLineStartIndex]))
 	m.Body = strings.TrimSpace(string(decoded[doubleNewLineStartIndex:]))
-	return
+	return m, nil
 }
 
-func getHeaderSectionEndingIndex(msg string) int {
+func getHeaderSectionEndingIndex(msg string) (int, error) {
 	//FT msg format uses CRLF for line endings
 	i := strings.Index(msg, "\r\n\r\n")
 	if i != -1 {
-		return i
+		return i, nil
 	}
 	//fallback to UNIX line endings
 	i = strings.Index(msg, "\n\n")
 	if i != -1 {
-		return i
+		return i, nil
 	}
-	log.Printf("WARN  - message with no message body: [%s]", msg)
-	return len(msg)
+
+	return 0, errors.New("header section ending not found")
 }
 
 var re = regexp.MustCompile("[\\w-]*:[\\w\\-:/.+;= ]*")
@@ -74,15 +78,18 @@ var re = regexp.MustCompile("[\\w-]*:[\\w\\-:/.+;= ]*")
 var kre = regexp.MustCompile("[\\w-]*:")
 var vre = regexp.MustCompile(":[\\w-:/.+;= ]*")
 
-func parseHeaders(msg string) (map[string]string, error) {
+func parseHeaders(msg string) map[string]string {
 	headerLines := re.FindAllString(msg, -1)
+	if headerLines == nil {
+		return nil
+	}
 
 	headers := make(map[string]string)
 	for _, line := range headerLines {
 		key, value := parseHeader(line)
 		headers[key] = value
 	}
-	return headers, nil
+	return headers
 }
 
 func parseHeader(header string) (string, string) {
