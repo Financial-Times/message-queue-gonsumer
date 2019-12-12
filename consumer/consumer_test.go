@@ -72,7 +72,7 @@ func TestConsumeWhileActiveTerminates(t *testing.T) {
 }
 
 func TestStartStop(t *testing.T) {
-	consumers := make([]queueConsumer, 2)
+	consumers := make([]instanceHandler, 2)
 	for i := 0; i < 2; i++ {
 		consumers[i] = &consumerInstance{config: QueueConfig{}, queue: defaultTestQueueCaller{}, shutdownChan: make(chan bool), processor: splitMessageProcessor{func(m Message) {}}}
 	}

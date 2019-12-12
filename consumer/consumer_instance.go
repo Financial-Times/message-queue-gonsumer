@@ -15,7 +15,7 @@ var offsetResetOptions = map[string]bool{
 }
 
 //NewConsumerInstance returns a new instance of consumerInstance
-func NewConsumerInstance(config QueueConfig, handler func(m Message), client *http.Client, logger *log.UPPLogger) queueConsumer {
+func NewConsumerInstance(config QueueConfig, handler func(m Message), client *http.Client, logger *log.UPPLogger) instanceHandler {
 	offset := "latest"
 	if offsetResetOptions[config.Offset] {
 		offset = config.Offset

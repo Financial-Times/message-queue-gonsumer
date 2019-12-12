@@ -24,25 +24,18 @@ type MessageConsumer interface {
 	ConnectivityCheck() (string, error)
 }
 
-type queueConsumer interface {
-	consumeWhileActive()
-	initiateShutdown()
-	shutdown()
-	checkConnectivity() error
-}
-
 // NewConsumer returns a new instance of a Consumer
 func NewConsumer(config QueueConfig, handler func(m Message), client *http.Client, logger *log.UPPLogger) MessageConsumer {
 	streamCount := 1
 	if config.StreamCount > 0 {
 		streamCount = config.StreamCount
 	}
-	consumers := make([]queueConsumer, streamCount)
+	instanceHandlers := make([]instanceHandler, streamCount)
 	for i := 0; i < streamCount; i++ {
-		consumers[i] = NewConsumerInstance(config, handler, client, logger)
+		instanceHandlers[i] = NewConsumerInstance(config, handler, client, logger)
 	}
 
-	return &Consumer{streamCount, consumers}
+	return &Consumer{streamCount, instanceHandlers}
 }
 
 // NewBatchedConsumer returns a Consumer to manage batches of messages
@@ -52,12 +45,12 @@ func NewBatchedConsumer(config QueueConfig, handler func(m []Message), client *h
 		streamCount = config.StreamCount
 	}
 
-	consumers := make([]queueConsumer, streamCount)
+	instanceHandlers := make([]instanceHandler, streamCount)
 	for i := 0; i < streamCount; i++ {
-		consumers[i] = NewBatchedConsumerInstance(config, handler, client, logger)
+		instanceHandlers[i] = NewBatchedConsumerInstance(config, handler, client, logger)
 	}
 
-	return &Consumer{streamCount, consumers}
+	return &Consumer{streamCount, instanceHandlers}
 }
 
 // NewAgeingConsumer returns a new instance of a Consumer with an AgeingClient
@@ -66,19 +59,26 @@ func NewAgeingConsumer(config QueueConfig, handler func(m Message), agingClient 
 	if config.StreamCount > 0 {
 		streamCount = config.StreamCount
 	}
-	consumers := make([]queueConsumer, streamCount)
+	instanceHandlers := make([]instanceHandler, streamCount)
 	for i := 0; i < streamCount; i++ {
-		consumers[i] = NewConsumerInstance(config, handler, agingClient.Client, logger)
+		instanceHandlers[i] = NewConsumerInstance(config, handler, agingClient.Client, logger)
 	}
 	agingClient.StartAgeingProcess()
 
-	return &Consumer{streamCount, consumers}
+	return &Consumer{streamCount, instanceHandlers}
+}
+
+type instanceHandler interface {
+	consumeWhileActive()
+	initiateShutdown()
+	shutdown()
+	checkConnectivity() error
 }
 
 // Consumer provides methods to consume messages from a kafka proxy
 type Consumer struct {
-	streamCount int
-	consumers   []queueConsumer
+	streamCount      int
+	instanceHandlers []instanceHandler
 }
 
 //Start is a method that triggers the consumption of messages from the queue
@@ -86,27 +86,27 @@ type Consumer struct {
 func (c *Consumer) Start() {
 	var wg sync.WaitGroup
 	wg.Add(c.streamCount)
-	for _, consumer := range c.consumers {
-		go func(consumer queueConsumer) {
+	for _, ih := range c.instanceHandlers {
+		go func(ih instanceHandler) {
 			defer wg.Done()
-			consumer.consumeWhileActive()
-		}(consumer)
+			ih.consumeWhileActive()
+		}(ih)
 	}
 	wg.Wait()
 }
 
 //Stop is a methode to stop the consumer
 func (c *Consumer) Stop() {
-	for _, consumer := range c.consumers {
-		consumer.initiateShutdown()
+	for _, ih := range c.instanceHandlers {
+		ih.initiateShutdown()
 	}
 }
 
 //ConnectivityCheck returns the connection status with the kafka proxy
 func (c *Consumer) ConnectivityCheck() (string, error) {
 	errMsg := ""
-	for _, consumer := range c.consumers {
-		if err := consumer.checkConnectivity(); err != nil {
+	for _, ih := range c.instanceHandlers {
+		if err := ih.checkConnectivity(); err != nil {
 			errMsg = errMsg + err.Error()
 		}
 	}
