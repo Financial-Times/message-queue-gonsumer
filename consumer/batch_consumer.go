@@ -6,8 +6,8 @@ import (
 	log "github.com/Financial-Times/go-logger/v2"
 )
 
-// NewBatchedQueueConsumer returns a new instance of a QueueConsumer that handles batches of messages
-func NewBatchedQueueConsumer(config QueueConfig, handler func(m []Message), client *http.Client, logger *log.UPPLogger) queueConsumer {
+// NewBatchedConsumerInstance returns a new instance of a QueueConsumer that handles batches of messages
+func NewBatchedConsumerInstance(config QueueConfig, handler func(m []Message), client *http.Client, logger *log.UPPLogger) queueConsumer {
 	offset := "latest"
 	if offsetResetOptions[config.Offset] {
 		offset = config.Offset
@@ -21,7 +21,7 @@ func NewBatchedQueueConsumer(config QueueConfig, handler func(m []Message), clie
 		caller:           defaultHTTPCaller{config.Queue, config.AuthorizationKey, client},
 	}
 
-	return &defaultQueueConsumer{
+	return &consumerInstance{
 		config:       config,
 		queue:        queue,
 		consumer:     nil,

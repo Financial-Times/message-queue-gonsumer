@@ -8,7 +8,7 @@ import (
 )
 
 func TestBatchConsumer(t *testing.T) {
-	consumer := &defaultQueueConsumer{
+	consumer := &consumerInstance{
 		config:   QueueConfig{},
 		queue:    defaultTestQueueCaller{},
 		consumer: consInstTest, processor: BatchedMessageProcessor{func(m []Message) {

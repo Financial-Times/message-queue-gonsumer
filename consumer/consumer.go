@@ -44,7 +44,7 @@ func NewConsumer(config QueueConfig, handler func(m Message), client *http.Clien
 	}
 	consumers := make([]queueConsumer, streamCount)
 	for i := 0; i < streamCount; i++ {
-		consumers[i] = NewQueueConsumer(config, handler, client, logger)
+		consumers[i] = NewConsumerInstance(config, handler, client, logger)
 	}
 
 	return &Consumer{streamCount, consumers}
@@ -59,7 +59,7 @@ func NewBatchedConsumer(config QueueConfig, handler func(m []Message), client *h
 
 	consumers := make([]queueConsumer, streamCount)
 	for i := 0; i < streamCount; i++ {
-		consumers[i] = NewBatchedQueueConsumer(config, handler, client, logger)
+		consumers[i] = NewBatchedConsumerInstance(config, handler, client, logger)
 	}
 
 	return &Consumer{streamCount, consumers}
@@ -73,7 +73,7 @@ func NewAgeingConsumer(config QueueConfig, handler func(m Message), agingClient 
 	}
 	consumers := make([]queueConsumer, streamCount)
 	for i := 0; i < streamCount; i++ {
-		consumers[i] = NewQueueConsumer(config, handler, agingClient.Client, logger)
+		consumers[i] = NewConsumerInstance(config, handler, agingClient.Client, logger)
 	}
 	agingClient.StartAgeingProcess()
 
@@ -145,8 +145,8 @@ var offsetResetOptions = map[string]bool{
 	"latest":   true,
 }
 
-//NewQueueConsumer returns a new instance of a QueueConsumer
-func NewQueueConsumer(config QueueConfig, handler func(m Message), client *http.Client, logger *log.UPPLogger) queueConsumer {
+//NewConsumerInstance returns a new instance of consumerInstance
+func NewConsumerInstance(config QueueConfig, handler func(m Message), client *http.Client, logger *log.UPPLogger) queueConsumer {
 	offset := "latest"
 	if offsetResetOptions[config.Offset] {
 		offset = config.Offset
@@ -159,7 +159,7 @@ func NewQueueConsumer(config QueueConfig, handler func(m Message), client *http.
 		autoCommitEnable: config.AutoCommitEnable,
 		caller:           defaultHTTPCaller{config.Queue, config.AuthorizationKey, client},
 	}
-	return &defaultQueueConsumer{
+	return &consumerInstance{
 		config:       config,
 		queue:        queue,
 		consumer:     nil,
@@ -169,9 +169,19 @@ func NewQueueConsumer(config QueueConfig, handler func(m Message), client *http.
 	}
 }
 
-//defaultQueueConsumer is the default implementation of the QueueConsumer interface.
-//NOTE: defaultQueueConsumer is not thread-safe!
-type defaultQueueConsumer struct {
+type queueCaller interface {
+	createConsumerInstance() (consumer, error)
+	destroyConsumerInstance(c consumer) error
+	subscribeConsumerInstance(c consumer) error
+	destroyConsumerInstanceSubscription(c consumer) error
+	consumeMessages(c consumer) ([]byte, error)
+	commitOffsets(c consumer) error
+	checkConnectivity() error
+}
+
+//consumerInstance is the default implementation of the QueueConsumer interface.
+//NOTE: consumerInstance is not thread-safe!
+type consumerInstance struct {
 	config       QueueConfig
 	queue        queueCaller
 	consumer     *consumer
@@ -180,7 +190,7 @@ type defaultQueueConsumer struct {
 	logger       *log.UPPLogger
 }
 
-func (c *defaultQueueConsumer) consumeWhileActive() {
+func (c *consumerInstance) consumeWhileActive() {
 	for {
 		select {
 		case <-c.shutdownChan:
@@ -192,7 +202,7 @@ func (c *defaultQueueConsumer) consumeWhileActive() {
 	}
 }
 
-func (c *defaultQueueConsumer) consumeAndHandleMessages() {
+func (c *consumerInstance) consumeAndHandleMessages() {
 	defer func() {
 		if r := recover(); r != nil {
 			err, ok := r.(error)
@@ -212,7 +222,7 @@ func (c *defaultQueueConsumer) consumeAndHandleMessages() {
 	}
 }
 
-func (c *defaultQueueConsumer) consume() ([]Message, error) {
+func (c *consumerInstance) consume() ([]Message, error) {
 	q := c.queue
 	if c.consumer == nil {
 		cInst, err := q.createConsumerInstance()
@@ -292,7 +302,7 @@ func (c *defaultQueueConsumer) consume() ([]Message, error) {
 	return msgs, nil
 }
 
-func (c *defaultQueueConsumer) shutdown() {
+func (c *consumerInstance) shutdown() {
 	if c.consumer != nil {
 		err := c.queue.destroyConsumerInstanceSubscription(*c.consumer)
 		if err != nil {
@@ -307,10 +317,10 @@ func (c *defaultQueueConsumer) shutdown() {
 	}
 }
 
-func (c *defaultQueueConsumer) initiateShutdown() {
+func (c *consumerInstance) initiateShutdown() {
 	c.shutdownChan <- true
 }
 
-func (c *defaultQueueConsumer) checkConnectivity() error {
+func (c *consumerInstance) checkConnectivity() error {
 	return c.queue.checkConnectivity()
 }

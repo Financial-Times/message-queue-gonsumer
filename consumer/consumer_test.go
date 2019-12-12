@@ -13,13 +13,13 @@ func TestConsume(t *testing.T) {
 	logger := log.NewUPPLogger("Test", "FATAL")
 
 	var tests = []struct {
-		consumer *defaultQueueConsumer
+		consumer *consumerInstance
 		expMsgs  []Message
 		expErr   error
 		expCons  *consumer //DefaultIterator's consumerInstance
 	}{
 		{
-			&defaultQueueConsumer{
+			&consumerInstance{
 				config: QueueConfig{}, queue: defaultTestQueueCaller{}, consumer: consInstTest,
 				processor: splitMessageProcessor{func(m Message) {}}, logger: logger},
 			msgsTest,
@@ -27,7 +27,7 @@ func TestConsume(t *testing.T) {
 			consInstTest,
 		},
 		{
-			&defaultQueueConsumer{
+			&consumerInstance{
 				config: QueueConfig{}, queue: defaultTestQueueCaller{},
 				processor: splitMessageProcessor{func(m Message) {}}, logger: logger},
 			msgsTest,
@@ -35,7 +35,7 @@ func TestConsume(t *testing.T) {
 			consInstTest,
 		},
 		{
-			&defaultQueueConsumer{
+			&consumerInstance{
 				config: QueueConfig{}, queue: consumeMsgErrorQueueCaller{}, consumer: consInstTest,
 				processor: splitMessageProcessor{func(m Message) {}}, logger: logger},
 			nil,
@@ -54,13 +54,13 @@ func TestConsume(t *testing.T) {
 }
 
 func TestConsumeAndHandleMessagesRecoversFromPanic(t *testing.T) {
-	c := defaultQueueConsumer{config: QueueConfig{BackoffPeriod: 1}, queue: consumeMsgPanicQueueCaller{}, processor: splitMessageProcessor{func(m Message) {}}}
+	c := consumerInstance{config: QueueConfig{BackoffPeriod: 1}, queue: consumeMsgPanicQueueCaller{}, processor: splitMessageProcessor{func(m Message) {}}}
 	c.consumeAndHandleMessages()
 }
 
 func TestConsumeWhileActiveTerminates(t *testing.T) {
 	sdChan := make(chan bool)
-	c := defaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, shutdownChan: sdChan, processor: splitMessageProcessor{func(m Message) {}}}
+	c := consumerInstance{config: QueueConfig{}, queue: defaultTestQueueCaller{}, shutdownChan: sdChan, processor: splitMessageProcessor{func(m Message) {}}}
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -74,7 +74,7 @@ func TestConsumeWhileActiveTerminates(t *testing.T) {
 func TestStartStop(t *testing.T) {
 	consumers := make([]queueConsumer, 2)
 	for i := 0; i < 2; i++ {
-		consumers[i] = &defaultQueueConsumer{config: QueueConfig{}, queue: defaultTestQueueCaller{}, shutdownChan: make(chan bool), processor: splitMessageProcessor{func(m Message) {}}}
+		consumers[i] = &consumerInstance{config: QueueConfig{}, queue: defaultTestQueueCaller{}, shutdownChan: make(chan bool), processor: splitMessageProcessor{func(m Message) {}}}
 	}
 	c := Consumer{2, consumers}
 
