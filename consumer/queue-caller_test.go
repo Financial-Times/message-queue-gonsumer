@@ -10,53 +10,52 @@ import (
 
 func TestBuildConsumerURL(t *testing.T) {
 	var tests = []struct {
-		c        consumer
+		c        consumerInstanceURI
 		q        defaultQueueCaller
 		expected string
 	}{
 		{
-			testConsumer,
-			defaultQueueCaller{
+			c: testConsumer,
+			q: defaultQueueCaller{
 				addrs:   []string{"https://localhost:8080/__kafka-rest-proxy"},
 				addrInd: 0,
 			},
-			"https://localhost:8080/__kafka-rest-proxy/consumers/group1/instances/rest-consumer-1-45864",
+			expected: "https://localhost:8080/__kafka-rest-proxy/consumers/group1/instances/rest-consumer-1-45864",
 		},
 		{
-			testConsumer,
-			defaultQueueCaller{
+			c: testConsumer,
+			q: defaultQueueCaller{
 				addrs:   []string{"http://kafka-proxy.prod.ft.com"},
 				addrInd: 0,
 			},
-			"http://kafka-proxy.prod.ft.com/consumers/group1/instances/rest-consumer-1-45864",
+			expected: "http://kafka-proxy.prod.ft.com/consumers/group1/instances/rest-consumer-1-45864",
 		},
 		{
-			testConsumer,
-			defaultQueueCaller{
+			c: testConsumer,
+			q: defaultQueueCaller{
 				addrs:   []string{"http://kafka-proxy-1.prod.ft.com", "http://kafka-proxy-2.prod.ft.com"},
 				addrInd: 0,
 			},
-			"http://kafka-proxy-1.prod.ft.com/consumers/group1/instances/rest-consumer-1-45864",
+			expected: "http://kafka-proxy-1.prod.ft.com/consumers/group1/instances/rest-consumer-1-45864",
 		},
 
 		{
-			testConsumer,
-			defaultQueueCaller{
+			c: testConsumer,
+			q: defaultQueueCaller{
 				addrs:   []string{"http://kafka-proxy-1.prod.ft.com", "http://kafka-proxy-2.prod.ft.com"},
 				addrInd: 1,
 			},
-			"http://kafka-proxy-2.prod.ft.com/consumers/group1/instances/rest-consumer-1-45864",
+			expected: "http://kafka-proxy-2.prod.ft.com/consumers/group1/instances/rest-consumer-1-45864",
 		},
 		{
-			consumer{
-				BaseURI:    "http://kafka-rest%3A8080/consumers/group1/instances/rest-consumer-1-45864",
-				InstanceID: "rest-consumer-1-45864",
+			c: consumerInstanceURI{
+				BaseURI: "http://kafka-rest%3A8080/consumers/group1/instances/rest-consumer-1-45864",
 			},
-			defaultQueueCaller{
+			q: defaultQueueCaller{
 				addrs:   []string{"https://kafka-rest-proxy"},
 				addrInd: 0,
 			},
-			"https://kafka-rest-proxy/consumers/group1/instances/rest-consumer-1-45864",
+			expected: "https://kafka-rest-proxy/consumers/group1/instances/rest-consumer-1-45864",
 		},
 	}
 
@@ -104,9 +103,8 @@ func TestCreateConsumerInstance_queueAddressesAreChangedInRoundRobinFashion(t *t
 
 }
 
-var testConsumer = consumer{
-	BaseURI:    "http://kafka/consumers/group1/instances/rest-consumer-1-45864",
-	InstanceID: "rest-consumer-1-45864",
+var testConsumer = consumerInstanceURI{
+	BaseURI: "http://kafka/consumers/group1/instances/rest-consumer-1-45864",
 }
 
 type testHTTPCaller struct {

@@ -16,31 +16,27 @@ func TestConsume(t *testing.T) {
 		consumer *consumerInstance
 		expMsgs  []Message
 		expErr   error
-		expCons  *consumer //DefaultIterator's consumerInstance
+		expCons  *consumerInstanceURI //DefaultIterator's consumerInstance
 	}{
 		{
-			&consumerInstance{
+			consumer: &consumerInstance{
 				config: QueueConfig{}, queue: defaultTestQueueCaller{}, consumer: consInstTest,
 				processor: splitMessageProcessor{func(m Message) {}}, logger: logger},
-			msgsTest,
-			nil,
-			consInstTest,
+			expMsgs: msgsTest,
+			expCons: consInstTest,
 		},
 		{
-			&consumerInstance{
+			consumer: &consumerInstance{
 				config: QueueConfig{}, queue: defaultTestQueueCaller{},
 				processor: splitMessageProcessor{func(m Message) {}}, logger: logger},
-			msgsTest,
-			nil,
-			consInstTest,
+			expMsgs: msgsTest,
+			expCons: consInstTest,
 		},
 		{
-			&consumerInstance{
+			consumer: &consumerInstance{
 				config: QueueConfig{}, queue: consumeMsgErrorQueueCaller{}, consumer: consInstTest,
 				processor: splitMessageProcessor{func(m Message) {}}, logger: logger},
-			nil,
-			errors.New("Error while consuming"),
-			nil,
+			expErr: errors.New("error while consuming"),
 		},
 	}
 
@@ -89,7 +85,7 @@ func TestStartStop(t *testing.T) {
 	wg.Wait()
 }
 
-var consInstTest = &consumer{"/queue/consumergroup/instance-d", "/instance-id"}
+var consInstTest = &consumerInstanceURI{"/queue/consumergroup/instance-d"}
 var msgsTestByteA = []byte(`[{"value":"RlRNU0cvMS4wCgpib2R5Cg==","partition":0,"offset":0},{"value":"TWVzc2FnZS1JZDogMDAwMC0xMTExLTAwMDAtYWJjZAoKW10K","partition":0,"offset":1}]`)
 var msgsTest = []Message{Message{nil, "body"}, Message{map[string]string{"Message-Id": "0000-1111-0000-abcd"}, "[]"}}
 
@@ -100,40 +96,40 @@ type defaultTestQueueCaller struct {
 	gracefullyShutdown bool
 }
 
-func (qc defaultTestQueueCaller) createConsumerInstance() (consumer, error) {
+func (qc defaultTestQueueCaller) createConsumerInstance() (consumerInstanceURI, error) {
 	return *consInstTest, nil
 }
 
-func (qc defaultTestQueueCaller) destroyConsumerInstance(cInst consumer) error {
-	if len(cInst.BaseURI) == 0 && len(cInst.InstanceID) == 0 {
+func (qc defaultTestQueueCaller) destroyConsumerInstance(cInst consumerInstanceURI) error {
+	if len(cInst.BaseURI) == 0 {
 		return errors.New("consumer instance is nil")
 	}
 	return nil
 }
 
-func (qc defaultTestQueueCaller) subscribeConsumerInstance(cInst consumer) error {
-	if len(cInst.BaseURI) == 0 && len(cInst.InstanceID) == 0 {
+func (qc defaultTestQueueCaller) subscribeConsumerInstance(cInst consumerInstanceURI) error {
+	if len(cInst.BaseURI) == 0 {
 		return errors.New("consumer instance is nil")
 	}
 	return nil
 }
 
-func (qc defaultTestQueueCaller) destroyConsumerInstanceSubscription(cInst consumer) error {
-	if len(cInst.BaseURI) == 0 && len(cInst.InstanceID) == 0 {
+func (qc defaultTestQueueCaller) destroyConsumerInstanceSubscription(cInst consumerInstanceURI) error {
+	if len(cInst.BaseURI) == 0 {
 		return errors.New("consumer instance is nil")
 	}
 	return nil
 }
 
-func (qc defaultTestQueueCaller) consumeMessages(cInst consumer) ([]byte, error) {
-	if len(cInst.BaseURI) == 0 && len(cInst.InstanceID) == 0 {
+func (qc defaultTestQueueCaller) consumeMessages(cInst consumerInstanceURI) ([]byte, error) {
+	if len(cInst.BaseURI) == 0 {
 		return nil, errors.New("consumer instance is nil")
 	}
 	return msgsTestByteA, nil
 }
 
-func (qc defaultTestQueueCaller) commitOffsets(cInst consumer) error {
-	if len(cInst.BaseURI) == 0 && len(cInst.InstanceID) == 0 {
+func (qc defaultTestQueueCaller) commitOffsets(cInst consumerInstanceURI) error {
+	if len(cInst.BaseURI) == 0 {
 		return errors.New("consumer instance is nil")
 	}
 	return nil
@@ -148,27 +144,27 @@ type consumeMsgErrorQueueCaller struct {
 	qc defaultTestQueueCaller
 }
 
-func (qc consumeMsgErrorQueueCaller) createConsumerInstance() (consumer, error) {
+func (qc consumeMsgErrorQueueCaller) createConsumerInstance() (consumerInstanceURI, error) {
 	return qc.qc.createConsumerInstance()
 }
 
-func (qc consumeMsgErrorQueueCaller) destroyConsumerInstance(cInst consumer) error {
+func (qc consumeMsgErrorQueueCaller) destroyConsumerInstance(cInst consumerInstanceURI) error {
 	return errors.New("Error while destroying")
 }
 
-func (qc consumeMsgErrorQueueCaller) subscribeConsumerInstance(cInst consumer) error {
+func (qc consumeMsgErrorQueueCaller) subscribeConsumerInstance(cInst consumerInstanceURI) error {
 	return nil
 }
 
-func (qc consumeMsgErrorQueueCaller) destroyConsumerInstanceSubscription(cInst consumer) error {
+func (qc consumeMsgErrorQueueCaller) destroyConsumerInstanceSubscription(cInst consumerInstanceURI) error {
 	return errors.New("Error while destroying subscription")
 }
 
-func (qc consumeMsgErrorQueueCaller) consumeMessages(cInst consumer) ([]byte, error) {
+func (qc consumeMsgErrorQueueCaller) consumeMessages(cInst consumerInstanceURI) ([]byte, error) {
 	return nil, errors.New("Error while consuming")
 }
 
-func (qc consumeMsgErrorQueueCaller) commitOffsets(cInst consumer) error {
+func (qc consumeMsgErrorQueueCaller) commitOffsets(cInst consumerInstanceURI) error {
 	return errors.New("Error while commiting offsets")
 }
 
@@ -180,27 +176,27 @@ type consumeMsgPanicQueueCaller struct {
 	qc defaultTestQueueCaller
 }
 
-func (qc consumeMsgPanicQueueCaller) createConsumerInstance() (consumer, error) {
+func (qc consumeMsgPanicQueueCaller) createConsumerInstance() (consumerInstanceURI, error) {
 	return qc.qc.createConsumerInstance()
 }
 
-func (qc consumeMsgPanicQueueCaller) destroyConsumerInstance(cInst consumer) error {
+func (qc consumeMsgPanicQueueCaller) destroyConsumerInstance(cInst consumerInstanceURI) error {
 	panic("Panic")
 }
 
-func (qc consumeMsgPanicQueueCaller) subscribeConsumerInstance(cInst consumer) error {
+func (qc consumeMsgPanicQueueCaller) subscribeConsumerInstance(cInst consumerInstanceURI) error {
 	return nil
 }
 
-func (qc consumeMsgPanicQueueCaller) destroyConsumerInstanceSubscription(cInst consumer) error {
+func (qc consumeMsgPanicQueueCaller) destroyConsumerInstanceSubscription(cInst consumerInstanceURI) error {
 	return errors.New("Error while destroying subscription")
 }
 
-func (qc consumeMsgPanicQueueCaller) consumeMessages(cInst consumer) ([]byte, error) {
+func (qc consumeMsgPanicQueueCaller) consumeMessages(cInst consumerInstanceURI) ([]byte, error) {
 	return nil, errors.New("Error while consuming")
 }
 
-func (qc consumeMsgPanicQueueCaller) commitOffsets(cInst consumer) error {
+func (qc consumeMsgPanicQueueCaller) commitOffsets(cInst consumerInstanceURI) error {
 	return errors.New("Error while commiting offsets")
 }
 

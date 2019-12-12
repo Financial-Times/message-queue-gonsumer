@@ -39,12 +39,12 @@ func NewConsumerInstance(config QueueConfig, handler func(m Message), client *ht
 }
 
 type queueCaller interface {
-	createConsumerInstance() (consumer, error)
-	destroyConsumerInstance(c consumer) error
-	subscribeConsumerInstance(c consumer) error
-	destroyConsumerInstanceSubscription(c consumer) error
-	consumeMessages(c consumer) ([]byte, error)
-	commitOffsets(c consumer) error
+	createConsumerInstance() (consumerInstanceURI, error)
+	destroyConsumerInstance(c consumerInstanceURI) error
+	subscribeConsumerInstance(c consumerInstanceURI) error
+	destroyConsumerInstanceSubscription(c consumerInstanceURI) error
+	consumeMessages(c consumerInstanceURI) ([]byte, error)
+	commitOffsets(c consumerInstanceURI) error
 	checkConnectivity() error
 }
 
@@ -57,7 +57,7 @@ type messageProcessor interface {
 type consumerInstance struct {
 	config       QueueConfig
 	queue        queueCaller
-	consumer     *consumer
+	consumer     *consumerInstanceURI
 	shutdownChan chan bool
 	processor    messageProcessor
 	logger       *log.UPPLogger

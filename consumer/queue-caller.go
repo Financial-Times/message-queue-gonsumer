@@ -33,24 +33,24 @@ type httpCaller interface {
 	DoReq(method, addr string, body io.Reader, headers map[string]string, expectedStatus int) ([]byte, error)
 }
 
-func (q *defaultQueueCaller) createConsumerInstance() (c consumer, err error) {
+func (q *defaultQueueCaller) createConsumerInstance() (c consumerInstanceURI, err error) {
 	q.addrInd = (q.addrInd + 1) % len(q.addrs)
 	addr := q.addrs[q.addrInd]
 
 	reqBody := strings.NewReader(`{"auto.offset.reset": "` + q.offset + `", "auto.commit.enable": "` + strconv.FormatBool(q.autoCommitEnable) + `"}`)
 	data, err := q.caller.DoReq("POST", addr+"/consumers/"+q.group, reqBody, map[string]string{"Content-Type": msgContentType}, http.StatusOK)
 	if err != nil {
-		return consumer{}, err
+		return consumerInstanceURI{}, err
 	}
 	err = json.Unmarshal(data, &c)
 	if err != nil {
-		return consumer{}, fmt.Errorf("error unmarshalling json content: %w", err)
+		return consumerInstanceURI{}, fmt.Errorf("error unmarshalling json content: %w", err)
 	}
 
 	return
 }
 
-func (q *defaultQueueCaller) destroyConsumerInstance(c consumer) (err error) {
+func (q *defaultQueueCaller) destroyConsumerInstance(c consumerInstanceURI) (err error) {
 	url, err := q.buildConsumerURL(c)
 	if err != nil {
 		return fmt.Errorf("error building consumer URL: %w", err)
@@ -60,7 +60,7 @@ func (q *defaultQueueCaller) destroyConsumerInstance(c consumer) (err error) {
 	return err
 }
 
-func (q *defaultQueueCaller) subscribeConsumerInstance(c consumer) (err error) {
+func (q *defaultQueueCaller) subscribeConsumerInstance(c consumerInstanceURI) (err error) {
 	url, err := q.buildConsumerURL(c)
 	if err != nil {
 		return fmt.Errorf("error building consumer URL: %w", err)
@@ -76,7 +76,7 @@ func (q *defaultQueueCaller) subscribeConsumerInstance(c consumer) (err error) {
 	return
 }
 
-func (q *defaultQueueCaller) destroyConsumerInstanceSubscription(c consumer) (err error) {
+func (q *defaultQueueCaller) destroyConsumerInstanceSubscription(c consumerInstanceURI) (err error) {
 	url, err := q.buildConsumerURL(c)
 	if err != nil {
 		return fmt.Errorf("error building consumer URL: %w", err)
@@ -87,7 +87,7 @@ func (q *defaultQueueCaller) destroyConsumerInstanceSubscription(c consumer) (er
 	return err
 }
 
-func (q *defaultQueueCaller) consumeMessages(c consumer) ([]byte, error) {
+func (q *defaultQueueCaller) consumeMessages(c consumerInstanceURI) ([]byte, error) {
 	uri, err := q.buildConsumerURL(c)
 	if err != nil {
 		return nil, fmt.Errorf("error building consumer URL: %w", err)
@@ -102,7 +102,7 @@ func (q *defaultQueueCaller) consumeMessages(c consumer) ([]byte, error) {
 	return data, nil
 }
 
-func (q *defaultQueueCaller) commitOffsets(c consumer) (err error) {
+func (q *defaultQueueCaller) commitOffsets(c consumerInstanceURI) (err error) {
 	url, err := q.buildConsumerURL(c)
 	if err != nil {
 		return fmt.Errorf("error building consumer URL: %w", err)
@@ -114,7 +114,7 @@ func (q *defaultQueueCaller) commitOffsets(c consumer) (err error) {
 	return err
 }
 
-func (q *defaultQueueCaller) buildConsumerURL(c consumer) (uri *url.URL, err error) {
+func (q *defaultQueueCaller) buildConsumerURL(c consumerInstanceURI) (uri *url.URL, err error) {
 	// In some cases the REST proxy returns encoded symbols in the URL
 	baseURI, err := url.QueryUnescape(c.BaseURI)
 	if err != nil {

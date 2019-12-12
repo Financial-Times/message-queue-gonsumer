@@ -15,7 +15,6 @@ type QueueConfig struct {
 	NoOfProcessors       int      `json:"noOfProcessors"`
 }
 
-type consumer struct {
-	BaseURI    string `json:"base_uri"`
-	InstanceID string `json:",instance_id"`
+type consumerInstanceURI struct {
+	BaseURI string `json:"base_uri"`
 }
