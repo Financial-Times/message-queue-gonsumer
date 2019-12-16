@@ -16,16 +16,6 @@ var ErrNoQueueAddresses = errors.New("no kafka-rest-proxy addresses configured")
 
 const msgContentType = "application/vnd.kafka.v2+json"
 
-type queueCaller interface {
-	createConsumerInstance() (consumer, error)
-	destroyConsumerInstance(c consumer) error
-	subscribeConsumerInstance(c consumer) error
-	destroyConsumerInstanceSubscription(c consumer) error
-	consumeMessages(c consumer) ([]byte, error)
-	commitOffsets(c consumer) error
-	checkConnectivity() error
-}
-
 type defaultQueueCaller struct {
 	//pool of queue addresses
 	//the active address is changed in a round-robin fashion before each new consumer instance creation
