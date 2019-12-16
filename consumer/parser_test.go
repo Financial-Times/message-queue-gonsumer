@@ -10,7 +10,7 @@ import (
 
 func TestParseResponse_ResponseContainsMultipleRawMessages_Success(t *testing.T) {
 	expected := []Message{
-		Message{
+		{
 			map[string]string{
 				"Message-Id":        "c6653374-922c-4b78-927d-15c5125fcd8d",
 				"Message-Timestamp": "2015-10-21T14:22:06.270Z",
@@ -22,7 +22,7 @@ func TestParseResponse_ResponseContainsMultipleRawMessages_Success(t *testing.T)
 			`{"contentUri":"http://methode-image-model-transformer-pr-uk-int.svc.ft.com/image/model/c94a3a57-3c99-423c-a6bd-ed8c4c10a3c3",
 "uuid":"c94a3a57-3c99-423c-a6bd-ed8c4c10a3c3", "destination":"methode-image-model-transformer", "relativeUrl":"/image/model/c94a3a57-3c99-423c-a6bd-ed8c4c10a3c3"}`,
 		},
-		Message{
+		{
 			map[string]string{
 				"Message-Id":        "be8132e8-dc95-459f-808f-e6a89e2dc8f0",
 				"Message-Timestamp": "2015-10-21T14:22:06.270Z",

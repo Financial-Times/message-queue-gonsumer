@@ -26,12 +26,13 @@ func parseResponse(data []byte, logger *log.UPPLogger) ([]Message, error) {
 	}
 	var msgs []Message
 	for _, m := range resp {
-		if msg, err := parseMessage(m.Value, logger); err == nil {
-			msgs = append(msgs, msg)
+		msg, err := parseMessage(m.Value, logger)
+		if err != nil {
+			logger.WithError(err).Error("Error parsing message")
 			continue
 		}
 
-		logger.WithError(err).Error("Error parsing message")
+		msgs = append(msgs, msg)
 	}
 	return msgs, nil
 }
@@ -73,10 +74,9 @@ func getHeaderSectionEndingIndex(msg string) (int, error) {
 	return 0, errors.New("header section ending not found")
 }
 
-var re = regexp.MustCompile("[\\w-]*:[\\w\\-:/.+;= ]*")
-
-var kre = regexp.MustCompile("[\\w-]*:")
-var vre = regexp.MustCompile(":[\\w-:/.+;= ]*")
+var re = regexp.MustCompile(`[\w-]*:[\w\-:/.+;= ]*`)
+var kre = regexp.MustCompile(`[\w-]*:`)
+var vre = regexp.MustCompile(`:[\w-:/.+;= ]*`)
 
 func parseHeaders(msg string) map[string]string {
 	headerLines := re.FindAllString(msg, -1)

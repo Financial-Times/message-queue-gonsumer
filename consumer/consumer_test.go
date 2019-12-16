@@ -87,13 +87,12 @@ func TestStartStop(t *testing.T) {
 
 var consInstTest = &consumerInstanceURI{"/queue/consumergroup/instance-d"}
 var msgsTestByteA = []byte(`[{"value":"RlRNU0cvMS4wCgpib2R5Cg==","partition":0,"offset":0},{"value":"TWVzc2FnZS1JZDogMDAwMC0xMTExLTAwMDAtYWJjZAoKW10K","partition":0,"offset":1}]`)
-var msgsTest = []Message{Message{nil, "body"}, Message{map[string]string{"Message-Id": "0000-1111-0000-abcd"}, "[]"}}
+var msgsTest = []Message{{nil, "body"}, {map[string]string{"Message-Id": "0000-1111-0000-abcd"}, "[]"}}
 
 //test queueCaller implementations
 
 //default happy-case behaviour
 type defaultTestQueueCaller struct {
-	gracefullyShutdown bool
 }
 
 func (qc defaultTestQueueCaller) createConsumerInstance() (consumerInstanceURI, error) {
@@ -149,7 +148,7 @@ func (qc consumeMsgErrorQueueCaller) createConsumerInstance() (consumerInstanceU
 }
 
 func (qc consumeMsgErrorQueueCaller) destroyConsumerInstance(cInst consumerInstanceURI) error {
-	return errors.New("Error while destroying")
+	return errors.New("error while destroying")
 }
 
 func (qc consumeMsgErrorQueueCaller) subscribeConsumerInstance(cInst consumerInstanceURI) error {
@@ -157,19 +156,19 @@ func (qc consumeMsgErrorQueueCaller) subscribeConsumerInstance(cInst consumerIns
 }
 
 func (qc consumeMsgErrorQueueCaller) destroyConsumerInstanceSubscription(cInst consumerInstanceURI) error {
-	return errors.New("Error while destroying subscription")
+	return errors.New("error while destroying subscription")
 }
 
 func (qc consumeMsgErrorQueueCaller) consumeMessages(cInst consumerInstanceURI) ([]byte, error) {
-	return nil, errors.New("Error while consuming")
+	return nil, errors.New("error while consuming")
 }
 
 func (qc consumeMsgErrorQueueCaller) commitOffsets(cInst consumerInstanceURI) error {
-	return errors.New("Error while commiting offsets")
+	return errors.New("error while committing offsets")
 }
 
 func (qc consumeMsgErrorQueueCaller) checkConnectivity() error {
-	return errors.New("Connectivity error")
+	return errors.New("connectivity error")
 }
 
 type consumeMsgPanicQueueCaller struct {
@@ -189,17 +188,17 @@ func (qc consumeMsgPanicQueueCaller) subscribeConsumerInstance(cInst consumerIns
 }
 
 func (qc consumeMsgPanicQueueCaller) destroyConsumerInstanceSubscription(cInst consumerInstanceURI) error {
-	return errors.New("Error while destroying subscription")
+	return errors.New("error while destroying subscription")
 }
 
 func (qc consumeMsgPanicQueueCaller) consumeMessages(cInst consumerInstanceURI) ([]byte, error) {
-	return nil, errors.New("Error while consuming")
+	return nil, errors.New("error while consuming")
 }
 
 func (qc consumeMsgPanicQueueCaller) commitOffsets(cInst consumerInstanceURI) error {
-	return errors.New("Error while commiting offsets")
+	return errors.New("error while committing offsets")
 }
 
 func (qc consumeMsgPanicQueueCaller) checkConnectivity() error {
-	return errors.New("Connectivity error")
+	return errors.New("connectivity error")
 }

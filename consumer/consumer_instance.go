@@ -129,7 +129,7 @@ func (c *consumerInstance) consume() ([]Message, error) {
 		return nil, err
 	}
 
-	if c.config.ConcurrentProcessing == true {
+	if c.config.ConcurrentProcessing {
 		processors := 100
 		if c.config.NoOfProcessors > 0 {
 			processors = c.config.NoOfProcessors
@@ -162,10 +162,10 @@ func (c *consumerInstance) consume() ([]Message, error) {
 		c.processor.consume(msgs...)
 	}
 
-	if c.config.AutoCommitEnable == false {
+	if !c.config.AutoCommitEnable {
 		err = q.commitOffsets(*c.consumer)
 		if err != nil {
-			c.logger.WithError(err).Error("Error commiting offsets")
+			c.logger.WithError(err).Error("Error committing offsets")
 
 			c.shutdown()
 			return nil, err

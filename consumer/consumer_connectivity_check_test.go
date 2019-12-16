@@ -23,7 +23,7 @@ func setupMockKafka(t *testing.T, status int, response string) *httptest.Server 
 		if status != 200 {
 			w.WriteHeader(status)
 		} else {
-			w.Write([]byte(response))
+			_, _ = w.Write([]byte(response))
 		}
 		assert.Equal(t, "/topics", req.URL.Path)
 		assert.Equal(t, "my-first-auth-key", req.Header.Get("Authorization"))

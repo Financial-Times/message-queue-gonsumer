@@ -19,12 +19,9 @@ func (c AgeingClient) StartAgeingProcess() {
 	c.Logger.Infof("Starting aging [%d]", c.MaxAge)
 	ticker := time.NewTicker(c.MaxAge)
 	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				c.Logger.Info("Closing idle connections")
-				c.Client.Transport.(*http.Transport).CloseIdleConnections()
-			}
+		for range ticker.C {
+			c.Logger.Info("Closing idle connections")
+			c.Client.Transport.(*http.Transport).CloseIdleConnections()
 		}
 	}()
 }

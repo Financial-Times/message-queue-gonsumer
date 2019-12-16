@@ -37,7 +37,7 @@ func (c httpClient) DoReq(method, url string, body io.Reader, headers map[string
 	}
 
 	defer func() {
-		io.Copy(ioutil.Discard, resp.Body)
+		_, _ = io.Copy(ioutil.Discard, resp.Body)
 		resp.Body.Close()
 		if resp.StatusCode >= 500 {
 			// This might be a problem with the server instance, which may have been taken out

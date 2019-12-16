@@ -82,7 +82,7 @@ func TestCreateConsumerInstance_queueAddressesAreChangedInRoundRobinFashion(t *t
 		t.Errorf("Error [%v]", err)
 	}
 	if queueCaller.addrInd != 1 {
-		t.Errorf("Failure: active addres index is not correct. Expected: %d. Actual: %d.", 1, queueCaller.addrInd)
+		t.Errorf("Failure: active address index is not correct. Expected: %d. Actual: %d.", 1, queueCaller.addrInd)
 	}
 
 	_, err = queueCaller.createConsumerInstance()
@@ -90,7 +90,7 @@ func TestCreateConsumerInstance_queueAddressesAreChangedInRoundRobinFashion(t *t
 		t.Errorf("Error [%v]", err)
 	}
 	if queueCaller.addrInd != 2 {
-		t.Errorf("Failure: active addres index is not correct. Expected: %d. Actual: %d.", 2, queueCaller.addrInd)
+		t.Errorf("Failure: active address index is not correct. Expected: %d. Actual: %d.", 2, queueCaller.addrInd)
 	}
 
 	_, err = queueCaller.createConsumerInstance()
@@ -98,7 +98,7 @@ func TestCreateConsumerInstance_queueAddressesAreChangedInRoundRobinFashion(t *t
 		t.Errorf("Error [%v]", err)
 	}
 	if queueCaller.addrInd != 0 {
-		t.Errorf("Failure: active addres index is not correct. Expected: %d. Actual: %d.", 0, queueCaller.addrInd)
+		t.Errorf("Failure: active address index is not correct. Expected: %d. Actual: %d.", 0, queueCaller.addrInd)
 	}
 
 }
