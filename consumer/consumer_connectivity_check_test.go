@@ -57,7 +57,7 @@ func TestConnectivityCheckUnhappyKakfka(t *testing.T) {
 	c := NewConsumer(consumerConfigMock, func(m Message) {}, &http.Client{})
 	msg, err := c.ConnectivityCheck()
 
-	assert.EqualError(t, err, "Could not connect to proxy: Unexpected response status 500. Expected: 200; ", "It should return an error")
+	assert.EqualError(t, err, "could not connect to proxy: unexpected response status 500. Expected: 200; ", "It should return an error")
 	assert.Equal(t, "Error connecting to consumer proxies", msg, `The check message should be "Error connecting to consumer proxies"`)
 }
 

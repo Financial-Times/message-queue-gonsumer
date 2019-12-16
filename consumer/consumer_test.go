@@ -101,6 +101,20 @@ func (qc defaultTestQueueCaller) destroyConsumerInstance(cInst consumer) error {
 	return nil
 }
 
+func (qc defaultTestQueueCaller) subscribeConsumerInstance(cInst consumer) error {
+	if len(cInst.BaseURI) == 0 && len(cInst.InstanceID) == 0 {
+		return errors.New("consumer instance is nil")
+	}
+	return nil
+}
+
+func (qc defaultTestQueueCaller) destroyConsumerInstanceSubscription(cInst consumer) error {
+	if len(cInst.BaseURI) == 0 && len(cInst.InstanceID) == 0 {
+		return errors.New("consumer instance is nil")
+	}
+	return nil
+}
+
 func (qc defaultTestQueueCaller) consumeMessages(cInst consumer) ([]Message, error) {
 	if len(cInst.BaseURI) == 0 && len(cInst.InstanceID) == 0 {
 		return nil, errors.New("consumer instance is nil")
@@ -132,6 +146,14 @@ func (qc consumeMsgErrorQueueCaller) destroyConsumerInstance(cInst consumer) err
 	return errors.New("Error while destroying")
 }
 
+func (qc consumeMsgErrorQueueCaller) subscribeConsumerInstance(cInst consumer) error {
+	return nil
+}
+
+func (qc consumeMsgErrorQueueCaller) destroyConsumerInstanceSubscription(cInst consumer) error {
+	return errors.New("Error while destroying subscription")
+}
+
 func (qc consumeMsgErrorQueueCaller) consumeMessages(cInst consumer) ([]Message, error) {
 	return nil, errors.New("Error while consuming")
 }
@@ -154,6 +176,14 @@ func (qc consumeMsgPanicQueueCaller) createConsumerInstance() (consumer, error) 
 
 func (qc consumeMsgPanicQueueCaller) destroyConsumerInstance(cInst consumer) error {
 	panic("Panic")
+}
+
+func (qc consumeMsgPanicQueueCaller) subscribeConsumerInstance(cInst consumer) error {
+	return nil
+}
+
+func (qc consumeMsgPanicQueueCaller) destroyConsumerInstanceSubscription(cInst consumer) error {
+	return errors.New("Error while destroying subscription")
 }
 
 func (qc consumeMsgPanicQueueCaller) consumeMessages(cInst consumer) ([]Message, error) {

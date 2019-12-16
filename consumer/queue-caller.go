@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -15,10 +14,14 @@ import (
 
 var ErrNoQueueAddresses = errors.New("no kafka-rest-proxy addresses configured")
 
+const msgContentType = "application/vnd.kafka.v2+json"
+
 type queueCaller interface {
 	createConsumerInstance() (consumer, error)
-	consumeMessages(c consumer) ([]Message, error)
 	destroyConsumerInstance(c consumer) error
+	subscribeConsumerInstance(c consumer) error
+	destroyConsumerInstanceSubscription(c consumer) error
+	consumeMessages(c consumer) ([]Message, error)
 	commitOffsets(c consumer) error
 	checkConnectivity() error
 }
@@ -45,55 +48,96 @@ func (q *defaultQueueCaller) createConsumerInstance() (c consumer, err error) {
 	q.addrInd = (q.addrInd + 1) % len(q.addrs)
 	addr := q.addrs[q.addrInd]
 
-	createConsumerReq := `{"auto.offset.reset": "` + q.offset + `", "auto.commit.enable": "` + strconv.FormatBool(q.autoCommitEnable) + `"}`
-	data, err := q.caller.DoReq("POST", addr+"/consumers/"+q.group, strings.NewReader(createConsumerReq), map[string]string{"Content-Type": "application/json"}, http.StatusOK)
+	reqBody := strings.NewReader(`{"auto.offset.reset": "` + q.offset + `", "auto.commit.enable": "` + strconv.FormatBool(q.autoCommitEnable) + `"}`)
+	data, err := q.caller.DoReq("POST", addr+"/consumers/"+q.group, reqBody, map[string]string{"Content-Type": msgContentType}, http.StatusOK)
 	if err != nil {
-		return
+		return consumer{}, err
 	}
 	err = json.Unmarshal(data, &c)
 	if err != nil {
-		log.Printf("ERROR - unmarshalling json content: %s", err.Error())
-		return
+		return consumer{}, fmt.Errorf("error unmarshalling json content: %w", err)
 	}
+
 	return
 }
 
 func (q *defaultQueueCaller) destroyConsumerInstance(c consumer) (err error) {
-	url, _ := q.buildConsumerURL(c)
-	_, err = q.caller.DoReq("DELETE", url.String(), nil, nil, http.StatusNoContent)
+	url, err := q.buildConsumerURL(c)
+	if err != nil {
+		return fmt.Errorf("error building consumer URL: %w", err)
+	}
+
+	_, err = q.caller.DoReq("DELETE", url.String(), nil, map[string]string{"Accept": msgContentType}, http.StatusNoContent)
+	return err
+}
+
+func (q *defaultQueueCaller) subscribeConsumerInstance(c consumer) (err error) {
+	url, err := q.buildConsumerURL(c)
+	if err != nil {
+		return fmt.Errorf("error building consumer URL: %w", err)
+	}
+
+	url.Path = strings.TrimRight(url.Path, "/") + "/subscription"
+	reqBody := strings.NewReader(`{"topics": ["` + q.topic + `"]}`)
+	_, err = q.caller.DoReq("POST", url.String(), reqBody, map[string]string{"Content-Type": msgContentType}, http.StatusNoContent)
+	if err != nil {
+		return err
+	}
+
 	return
 }
 
+func (q *defaultQueueCaller) destroyConsumerInstanceSubscription(c consumer) (err error) {
+	url, err := q.buildConsumerURL(c)
+	if err != nil {
+		return fmt.Errorf("error building consumer URL: %w", err)
+	}
+
+	url.Path = strings.TrimRight(url.Path, "/") + "/subscription"
+	_, err = q.caller.DoReq("DELETE", url.String(), nil, map[string]string{"Accept": msgContentType}, http.StatusNoContent)
+	return err
+}
+
 func (q *defaultQueueCaller) consumeMessages(c consumer) ([]Message, error) {
-	uri, _ := q.buildConsumerURL(c)
-	uri.Path = strings.TrimRight(uri.Path, "/") + "/topics/" + q.topic
-	data, err := q.caller.DoReq("GET", uri.String(), nil, map[string]string{"Accept": "application/json"}, http.StatusOK)
+	uri, err := q.buildConsumerURL(c)
+	if err != nil {
+		return nil, fmt.Errorf("error building consumer URL: %w", err)
+	}
+
+	uri.Path = strings.TrimRight(uri.Path, "/") + "/records"
+	data, err := q.caller.DoReq("GET", uri.String(), nil, map[string]string{"Accept": msgContentType}, http.StatusOK)
 	if err != nil {
 		return nil, err
 	}
+
 	return parseResponse(data)
 }
 
 func (q *defaultQueueCaller) commitOffsets(c consumer) (err error) {
-	url, _ := q.buildConsumerURL(c)
+	url, err := q.buildConsumerURL(c)
+	if err != nil {
+		return fmt.Errorf("error building consumer URL: %w", err)
+	}
+
 	url.Path = strings.TrimRight(url.Path, "/") + "/offsets"
-	_, err = q.caller.DoReq("POST", url.String(), nil, nil, http.StatusOK)
-	return
+	_, err = q.caller.DoReq("POST", url.String(), nil, map[string]string{"Content-Type": msgContentType}, http.StatusOK)
+
+	return err
 }
 
 func (q *defaultQueueCaller) buildConsumerURL(c consumer) (uri *url.URL, err error) {
 	uri, err = url.Parse(c.BaseURI)
 	if err != nil {
-		log.Printf("ERROR - parsing base URI: %s", err.Error())
-		return
+		return nil, fmt.Errorf("error parsing base URI: %w", err)
 	}
+
 	addr := q.addrs[q.addrInd]
 	addrURL, err := url.Parse(addr)
 	if err != nil {
-		log.Printf("ERROR - parsing Addr: %s", err.Error())
+		return nil, fmt.Errorf("error parsing queue address: %w", err)
 	}
 	addrURL.Path = addrURL.Path + uri.Path
-	return addrURL, err
+	return addrURL, nil
 }
 
 type defaultHTTPCaller struct {
@@ -105,8 +149,7 @@ type defaultHTTPCaller struct {
 func (caller defaultHTTPCaller) DoReq(method, url string, body io.Reader, headers map[string]string, expectedStatus int) (data []byte, err error) {
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
-		log.Printf("ERROR - creating request: %s", err.Error())
-		return
+		return nil, fmt.Errorf("error creating request: %w", err)
 	}
 
 	for k, v := range headers {
@@ -122,8 +165,7 @@ func (caller defaultHTTPCaller) DoReq(method, url string, body io.Reader, header
 
 	resp, err := caller.client.Do(req)
 	if err != nil {
-		log.Printf("ERROR - executing request: %s", err.Error())
-		return
+		return nil, fmt.Errorf("error executing request: %w", err)
 	}
 
 	defer func() {
@@ -141,9 +183,7 @@ func (caller defaultHTTPCaller) DoReq(method, url string, body io.Reader, header
 	}()
 
 	if resp.StatusCode != expectedStatus {
-		err = fmt.Errorf("Unexpected response status %d. Expected: %d", resp.StatusCode, expectedStatus)
-		log.Printf("ERROR - %s", err.Error())
-		return
+		return nil, fmt.Errorf("unexpected response status %d. Expected: %d", resp.StatusCode, expectedStatus)
 	}
 
 	return ioutil.ReadAll(resp.Body)
@@ -167,9 +207,10 @@ func (q *defaultQueueCaller) checkConnectivity() error {
 }
 
 func (q *defaultQueueCaller) checkMessageQueueProxyReachable(address string) error {
-	_, err := q.caller.DoReq("GET", address+"/topics", nil, map[string]string{"Accept": "application/json"}, http.StatusOK)
+	_, err := q.caller.DoReq("GET", address+"/topics", nil, map[string]string{"Accept": msgContentType}, http.StatusOK)
 	if err != nil {
-		return errors.New("Could not connect to proxy: " + err.Error())
+		return fmt.Errorf("could not connect to proxy: %w", err)
 	}
+
 	return nil
 }

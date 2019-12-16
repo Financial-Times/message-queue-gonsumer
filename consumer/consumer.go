@@ -10,9 +10,9 @@ import (
 
 // MessageConsumer is a high level generic interface for consumers.
 //
-// Start triggers the consution of messages.
+// Start triggers the consumption of messages.
 //
-// Stop method stops the consuption of messages.
+// Stop method stops the consumption of messages.
 //
 // ConnectivityCheck implements the logic to check the current
 // connectivity to the queue.
@@ -142,10 +142,22 @@ type splitMessageProcessor struct {
 	handler func(m Message)
 }
 
+func (p splitMessageProcessor) consume(msgs ...Message) {
+	for _, msg := range msgs {
+		p.handler(msg)
+	}
+}
+
+var offsetResetOptions = map[string]bool{
+	"none":     true, // Not recommended for use because it throws exception to the consumer if no previous offset is found
+	"earliest": true, // Not recommended for use bacause it will impact the memory usage of the proxy
+	"latest":   true,
+}
+
 //NewQueueConsumer returns a new instance of a QueueConsumer
 func NewQueueConsumer(config QueueConfig, handler func(m Message), client *http.Client) queueConsumer {
-	offset := "largest"
-	if len(config.Offset) > 0 {
+	offset := "latest"
+	if offsetResetOptions[config.Offset] {
 		offset = config.Offset
 	}
 	queue := &defaultQueueCaller{
@@ -192,12 +204,6 @@ func (c *defaultQueueConsumer) consumeAndHandleMessages() {
 	}
 }
 
-func (p splitMessageProcessor) consume(msgs ...Message) {
-	for _, msg := range msgs {
-		p.handler(msg)
-	}
-}
-
 func (c *defaultQueueConsumer) consume() ([]Message, error) {
 	q := c.queue
 	if c.consumer == nil {
@@ -207,16 +213,21 @@ func (c *defaultQueueConsumer) consume() ([]Message, error) {
 			return nil, err
 		}
 		c.consumer = &cInst
+
+		err = q.subscribeConsumerInstance(*c.consumer)
+		if err != nil {
+			log.Printf("ERROR - subscribing consumer instance to topic: %s", err.Error())
+
+			c.shutdown()
+			return nil, err
+		}
 	}
 
 	msgs, err := q.consumeMessages(*c.consumer)
 	if err != nil {
 		log.Printf("ERROR - consuming messages: %s", err.Error())
-		errD := q.destroyConsumerInstance(*c.consumer)
-		if errD != nil {
-			log.Printf("ERROR - deleting consumer instance: %s", errD.Error())
-		}
-		c.consumer = nil
+
+		c.shutdown()
 		return nil, err
 	}
 
@@ -257,11 +268,8 @@ func (c *defaultQueueConsumer) consume() ([]Message, error) {
 		err = q.commitOffsets(*c.consumer)
 		if err != nil {
 			log.Printf("ERROR -  commiting offsets: %s", err.Error())
-			errD := q.destroyConsumerInstance(*c.consumer)
-			if errD != nil {
-				log.Printf("ERROR - deleting consumer instance: %s", errD.Error())
-			}
-			c.consumer = nil
+
+			c.shutdown()
 			return nil, err
 		}
 	}
@@ -271,10 +279,16 @@ func (c *defaultQueueConsumer) consume() ([]Message, error) {
 
 func (c *defaultQueueConsumer) shutdown() {
 	if c.consumer != nil {
-		err := c.queue.destroyConsumerInstance(*c.consumer)
+		err := c.queue.destroyConsumerInstanceSubscription(*c.consumer)
+		if err != nil {
+			log.Printf("ERROR - deleting consumer instance subscription: %s", err.Error())
+		}
+		err = c.queue.destroyConsumerInstance(*c.consumer)
 		if err != nil {
 			log.Printf("ERROR - deleting consumer instance: %s", err.Error())
 		}
+
+		c.consumer = nil
 	}
 }
 

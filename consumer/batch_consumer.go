@@ -4,8 +4,8 @@ import "net/http"
 
 // NewBatchedQueueConsumer returns a new instance of a QueueConsumer that handles batches of messages
 func NewBatchedQueueConsumer(config QueueConfig, handler func(m []Message), client *http.Client) queueConsumer {
-	offset := "largest"
-	if len(config.Offset) > 0 {
+	offset := "latest"
+	if offsetResetOptions[config.Offset] {
 		offset = config.Offset
 	}
 	queue := &defaultQueueCaller{
