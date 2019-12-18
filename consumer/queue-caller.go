@@ -15,7 +15,11 @@ var ErrNoQueueAddresses = errors.New("no kafka-rest-proxy addresses configured")
 
 const msgContentType = "application/vnd.kafka.v2+json"
 
-type defaultQueueCaller struct {
+type httpCaller interface {
+	DoReq(method, addr string, body io.Reader, headers map[string]string, expectedStatus int) ([]byte, error)
+}
+
+type kafkaRESTClient struct {
 	//pool of queue addresses
 	//the active address is changed in a round-robin fashion before each new consumer instance creation
 	addrs []string
@@ -29,11 +33,7 @@ type defaultQueueCaller struct {
 	autoCommitEnable bool
 }
 
-type httpCaller interface {
-	DoReq(method, addr string, body io.Reader, headers map[string]string, expectedStatus int) ([]byte, error)
-}
-
-func (q *defaultQueueCaller) createConsumerInstance() (c consumerInstanceURI, err error) {
+func (q *kafkaRESTClient) createConsumerInstance() (c consumerInstanceURI, err error) {
 	q.addrInd = (q.addrInd + 1) % len(q.addrs)
 	addr := q.addrs[q.addrInd]
 
@@ -50,7 +50,7 @@ func (q *defaultQueueCaller) createConsumerInstance() (c consumerInstanceURI, er
 	return
 }
 
-func (q *defaultQueueCaller) destroyConsumerInstance(c consumerInstanceURI) (err error) {
+func (q *kafkaRESTClient) destroyConsumerInstance(c consumerInstanceURI) (err error) {
 	url, err := q.buildConsumerURL(c)
 	if err != nil {
 		return fmt.Errorf("error building consumer URL: %w", err)
@@ -60,7 +60,7 @@ func (q *defaultQueueCaller) destroyConsumerInstance(c consumerInstanceURI) (err
 	return err
 }
 
-func (q *defaultQueueCaller) subscribeConsumerInstance(c consumerInstanceURI) (err error) {
+func (q *kafkaRESTClient) subscribeConsumerInstance(c consumerInstanceURI) (err error) {
 	url, err := q.buildConsumerURL(c)
 	if err != nil {
 		return fmt.Errorf("error building consumer URL: %w", err)
@@ -76,7 +76,7 @@ func (q *defaultQueueCaller) subscribeConsumerInstance(c consumerInstanceURI) (e
 	return
 }
 
-func (q *defaultQueueCaller) destroyConsumerInstanceSubscription(c consumerInstanceURI) (err error) {
+func (q *kafkaRESTClient) destroyConsumerInstanceSubscription(c consumerInstanceURI) (err error) {
 	url, err := q.buildConsumerURL(c)
 	if err != nil {
 		return fmt.Errorf("error building consumer URL: %w", err)
@@ -87,7 +87,7 @@ func (q *defaultQueueCaller) destroyConsumerInstanceSubscription(c consumerInsta
 	return err
 }
 
-func (q *defaultQueueCaller) consumeMessages(c consumerInstanceURI) ([]byte, error) {
+func (q *kafkaRESTClient) consumeMessages(c consumerInstanceURI) ([]byte, error) {
 	uri, err := q.buildConsumerURL(c)
 	if err != nil {
 		return nil, fmt.Errorf("error building consumer URL: %w", err)
@@ -102,7 +102,7 @@ func (q *defaultQueueCaller) consumeMessages(c consumerInstanceURI) ([]byte, err
 	return data, nil
 }
 
-func (q *defaultQueueCaller) commitOffsets(c consumerInstanceURI) (err error) {
+func (q *kafkaRESTClient) commitOffsets(c consumerInstanceURI) (err error) {
 	url, err := q.buildConsumerURL(c)
 	if err != nil {
 		return fmt.Errorf("error building consumer URL: %w", err)
@@ -114,7 +114,7 @@ func (q *defaultQueueCaller) commitOffsets(c consumerInstanceURI) (err error) {
 	return err
 }
 
-func (q *defaultQueueCaller) buildConsumerURL(c consumerInstanceURI) (uri *url.URL, err error) {
+func (q *kafkaRESTClient) buildConsumerURL(c consumerInstanceURI) (uri *url.URL, err error) {
 	// In some cases the REST proxy returns encoded symbols in the URL
 	baseURI, err := url.QueryUnescape(c.BaseURI)
 	if err != nil {
@@ -135,7 +135,7 @@ func (q *defaultQueueCaller) buildConsumerURL(c consumerInstanceURI) (uri *url.U
 	return addrURL, nil
 }
 
-func (q *defaultQueueCaller) checkConnectivity() error {
+func (q *kafkaRESTClient) checkConnectivity() error {
 	if len(q.addrs) == 0 {
 		return ErrNoQueueAddresses
 	}
@@ -152,7 +152,7 @@ func (q *defaultQueueCaller) checkConnectivity() error {
 	return nil
 }
 
-func (q *defaultQueueCaller) checkMessageQueueProxyReachable(address string) error {
+func (q *kafkaRESTClient) checkMessageQueueProxyReachable(address string) error {
 	_, err := q.caller.DoReq("GET", address+"/topics", nil, map[string]string{"Accept": msgContentType}, http.StatusOK)
 	if err != nil {
 		return fmt.Errorf("could not connect to proxy: %w", err)

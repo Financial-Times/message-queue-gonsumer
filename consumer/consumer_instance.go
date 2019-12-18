@@ -25,7 +25,7 @@ func newConsumerInstance(config QueueConfig, handler func(m Message), client *ht
 	if offsetResetOptions[config.Offset] {
 		offset = config.Offset
 	}
-	queue := &defaultQueueCaller{
+	queue := &kafkaRESTClient{
 		addrs:            config.Addrs,
 		group:            config.Group,
 		topic:            config.Topic,
@@ -49,7 +49,7 @@ func newBatchedConsumerInstance(config QueueConfig, handler func(m []Message), c
 	if offsetResetOptions[config.Offset] {
 		offset = config.Offset
 	}
-	queue := &defaultQueueCaller{
+	queue := &kafkaRESTClient{
 		addrs:            config.Addrs,
 		group:            config.Group,
 		topic:            config.Topic,

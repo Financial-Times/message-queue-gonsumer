@@ -11,12 +11,12 @@ import (
 func TestBuildConsumerURL(t *testing.T) {
 	var tests = []struct {
 		c        consumerInstanceURI
-		q        defaultQueueCaller
+		q        kafkaRESTClient
 		expected string
 	}{
 		{
 			c: testConsumer,
-			q: defaultQueueCaller{
+			q: kafkaRESTClient{
 				addrs:   []string{"https://localhost:8080/__kafka-rest-proxy"},
 				addrInd: 0,
 			},
@@ -24,7 +24,7 @@ func TestBuildConsumerURL(t *testing.T) {
 		},
 		{
 			c: testConsumer,
-			q: defaultQueueCaller{
+			q: kafkaRESTClient{
 				addrs:   []string{"http://kafka-proxy.prod.ft.com"},
 				addrInd: 0,
 			},
@@ -32,7 +32,7 @@ func TestBuildConsumerURL(t *testing.T) {
 		},
 		{
 			c: testConsumer,
-			q: defaultQueueCaller{
+			q: kafkaRESTClient{
 				addrs:   []string{"http://kafka-proxy-1.prod.ft.com", "http://kafka-proxy-2.prod.ft.com"},
 				addrInd: 0,
 			},
@@ -41,7 +41,7 @@ func TestBuildConsumerURL(t *testing.T) {
 
 		{
 			c: testConsumer,
-			q: defaultQueueCaller{
+			q: kafkaRESTClient{
 				addrs:   []string{"http://kafka-proxy-1.prod.ft.com", "http://kafka-proxy-2.prod.ft.com"},
 				addrInd: 1,
 			},
@@ -51,7 +51,7 @@ func TestBuildConsumerURL(t *testing.T) {
 			c: consumerInstanceURI{
 				BaseURI: "http://kafka-rest%3A8080/consumers/group1/instances/rest-consumer-1-45864",
 			},
-			q: defaultQueueCaller{
+			q: kafkaRESTClient{
 				addrs:   []string{"https://kafka-rest-proxy"},
 				addrInd: 0,
 			},
@@ -72,7 +72,7 @@ func TestBuildConsumerURL(t *testing.T) {
 }
 
 func TestCreateConsumerInstance_queueAddressesAreChangedInRoundRobinFashion(t *testing.T) {
-	queueCaller := &defaultQueueCaller{
+	queueCaller := &kafkaRESTClient{
 		addrs:  []string{"http://kafka-proxy-1.prod.ft.com", "http://kafka-proxy-2.prod.ft.com", "http://kafka-proxy-3.prod.ft.com"},
 		caller: testHTTPCaller{},
 	}
@@ -116,7 +116,7 @@ func (t testHTTPCaller) DoReq(method, addr string, body io.Reader, headers map[s
 }
 
 func TestNoQueueAddressesFails(t *testing.T) {
-	q := defaultQueueCaller{}
+	q := kafkaRESTClient{}
 	err := q.checkConnectivity()
 
 	assert.EqualError(t, err, ErrNoQueueAddresses.Error())
