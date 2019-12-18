@@ -32,7 +32,7 @@ func NewConsumer(config QueueConfig, handler func(m Message), client *http.Clien
 	}
 	instanceHandlers := make([]instanceHandler, streamCount)
 	for i := 0; i < streamCount; i++ {
-		instanceHandlers[i] = NewConsumerInstance(config, handler, client, logger)
+		instanceHandlers[i] = newConsumerInstance(config, handler, client, logger)
 	}
 
 	return &Consumer{streamCount, instanceHandlers}
@@ -47,7 +47,7 @@ func NewBatchedConsumer(config QueueConfig, handler func(m []Message), client *h
 
 	instanceHandlers := make([]instanceHandler, streamCount)
 	for i := 0; i < streamCount; i++ {
-		instanceHandlers[i] = NewBatchedConsumerInstance(config, handler, client, logger)
+		instanceHandlers[i] = newBatchedConsumerInstance(config, handler, client, logger)
 	}
 
 	return &Consumer{streamCount, instanceHandlers}
@@ -61,7 +61,7 @@ func NewAgeingConsumer(config QueueConfig, handler func(m Message), agingClient 
 	}
 	instanceHandlers := make([]instanceHandler, streamCount)
 	for i := 0; i < streamCount; i++ {
-		instanceHandlers[i] = NewConsumerInstance(config, handler, agingClient.Client, logger)
+		instanceHandlers[i] = newConsumerInstance(config, handler, agingClient.Client, logger)
 	}
 	agingClient.StartAgeingProcess()
 
@@ -115,21 +115,4 @@ func (c *Consumer) ConnectivityCheck() (string, error) {
 	}
 
 	return "Error connecting to consumer proxies", errors.New(errMsg)
-}
-
-//Message defines the consumed messages
-type Message struct {
-	Headers map[string]string
-	Body    string
-}
-
-//SplitMessageProcessor processes messages one by one
-type splitMessageProcessor struct {
-	handler func(m Message)
-}
-
-func (p splitMessageProcessor) consume(msgs ...Message) {
-	for _, msg := range msgs {
-		p.handler(msg)
-	}
 }

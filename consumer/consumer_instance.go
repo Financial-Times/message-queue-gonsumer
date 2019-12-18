@@ -19,8 +19,8 @@ var offsetResetOptions = map[string]bool{
 	"latest":   true,
 }
 
-//NewConsumerInstance returns a new instance of consumerInstance
-func NewConsumerInstance(config QueueConfig, handler func(m Message), client *http.Client, logger *log.UPPLogger) instanceHandler {
+// newConsumerInstance returns a new instance of consumerInstance
+func newConsumerInstance(config QueueConfig, handler func(m Message), client *http.Client, logger *log.UPPLogger) *consumerInstance {
 	offset := defaultOffsetReset
 	if offsetResetOptions[config.Offset] {
 		offset = config.Offset
@@ -39,6 +39,31 @@ func NewConsumerInstance(config QueueConfig, handler func(m Message), client *ht
 		consumer:     nil,
 		shutdownChan: make(chan bool, 1),
 		processor:    splitMessageProcessor{handler},
+		logger:       logger,
+	}
+}
+
+// newBatchedConsumerInstance returns a new instance of a QueueConsumer that handles batches of messages
+func newBatchedConsumerInstance(config QueueConfig, handler func(m []Message), client *http.Client, logger *log.UPPLogger) *consumerInstance {
+	offset := defaultOffsetReset
+	if offsetResetOptions[config.Offset] {
+		offset = config.Offset
+	}
+	queue := &defaultQueueCaller{
+		addrs:            config.Addrs,
+		group:            config.Group,
+		topic:            config.Topic,
+		offset:           offset,
+		autoCommitEnable: config.AutoCommitEnable,
+		caller:           httpClient{config.Queue, config.AuthorizationKey, client},
+	}
+
+	return &consumerInstance{
+		config:       config,
+		queue:        queue,
+		consumer:     nil,
+		shutdownChan: make(chan bool, 1),
+		processor:    batchedMessageProcessor{handler},
 		logger:       logger,
 	}
 }
