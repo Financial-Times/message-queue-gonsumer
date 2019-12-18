@@ -8,7 +8,7 @@ import (
 
 // NewBatchedConsumerInstance returns a new instance of a QueueConsumer that handles batches of messages
 func NewBatchedConsumerInstance(config QueueConfig, handler func(m []Message), client *http.Client, logger *log.UPPLogger) instanceHandler {
-	offset := "latest"
+	offset := defaultOffsetReset
 	if offsetResetOptions[config.Offset] {
 		offset = config.Offset
 	}

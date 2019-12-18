@@ -8,6 +8,11 @@ import (
 	log "github.com/Financial-Times/go-logger/v2"
 )
 
+const (
+	defaultBackoffPeriod = 8
+	defaultOffsetReset   = "latest"
+)
+
 var offsetResetOptions = map[string]bool{
 	"none":     true, // Not recommended for use because it throws exception to the consumer if no previous offset is found
 	"earliest": true, // Not recommended for use bacause it will impact the memory usage of the proxy
@@ -16,7 +21,7 @@ var offsetResetOptions = map[string]bool{
 
 //NewConsumerInstance returns a new instance of consumerInstance
 func NewConsumerInstance(config QueueConfig, handler func(m Message), client *http.Client, logger *log.UPPLogger) instanceHandler {
-	offset := "latest"
+	offset := defaultOffsetReset
 	if offsetResetOptions[config.Offset] {
 		offset = config.Offset
 	}
@@ -84,7 +89,7 @@ func (c *consumerInstance) consumeAndHandleMessages() {
 			}
 		}
 	}()
-	backoffPeriod := 8
+	backoffPeriod := defaultBackoffPeriod
 	if c.config.BackoffPeriod > 0 {
 		backoffPeriod = c.config.BackoffPeriod
 	}
