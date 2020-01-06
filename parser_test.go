@@ -4,11 +4,13 @@ import (
 	"encoding/base64"
 	"reflect"
 	"testing"
+
+	logger "github.com/Financial-Times/go-logger/v2"
 )
 
 func TestParseResponse_ResponseContainsMultipleRawMessages_Success(t *testing.T) {
 	expected := []Message{
-		Message{
+		{
 			map[string]string{
 				"Message-Id":        "c6653374-922c-4b78-927d-15c5125fcd8d",
 				"Message-Timestamp": "2015-10-21T14:22:06.270Z",
@@ -20,7 +22,7 @@ func TestParseResponse_ResponseContainsMultipleRawMessages_Success(t *testing.T)
 			`{"contentUri":"http://methode-image-model-transformer-pr-uk-int.svc.ft.com/image/model/c94a3a57-3c99-423c-a6bd-ed8c4c10a3c3",
 "uuid":"c94a3a57-3c99-423c-a6bd-ed8c4c10a3c3", "destination":"methode-image-model-transformer", "relativeUrl":"/image/model/c94a3a57-3c99-423c-a6bd-ed8c4c10a3c3"}`,
 		},
-		Message{
+		{
 			map[string]string{
 				"Message-Id":        "be8132e8-dc95-459f-808f-e6a89e2dc8f0",
 				"Message-Timestamp": "2015-10-21T14:22:06.270Z",
@@ -34,7 +36,8 @@ func TestParseResponse_ResponseContainsMultipleRawMessages_Success(t *testing.T)
 		},
 	}
 
-	actual, err := parseResponse([]byte(testRawResp))
+	log := logger.NewUPPLogger("Test", "FATAL")
+	actual, err := parseResponse([]byte(testRawResp), log)
 	if err != nil {
 		t.Fatalf("Error: [%v]", err)
 	}
@@ -55,7 +58,8 @@ func TestParseMessage_RawMessage_Success(t *testing.T) {
 		testBody4RawMsgValue,
 	}
 
-	actual, err := parseMessage(testRawMsgValue)
+	log := logger.NewUPPLogger("Test", "FATAL")
+	actual, err := parseMessage(testRawMsgValue, log)
 	if err != nil {
 		t.Fatalf("Error: [%v]", err)
 	}
@@ -86,7 +90,8 @@ X-Request-Id: SYNTHETIC-REQ-MON_Unv1K838lY
 		`{"uuid":"e7a3b814-59ee-459e-8f60-517f3e80ed99", "value":"test","attributes":[]}`,
 	}
 
-	actual, _ := parseMessage(base64.StdEncoding.EncodeToString([]byte(testMsg)))
+	log := logger.NewUPPLogger("Test", "FATAL")
+	actual, _ := parseMessage(base64.StdEncoding.EncodeToString([]byte(testMsg)), log)
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Expected: [%v]\nActual: [%v]", expected, actual)
 	}
@@ -113,7 +118,9 @@ foobar`
 		},
 		"foobar",
 	}
-	actual, _ := parseMessage(base64.StdEncoding.EncodeToString([]byte(testMsg)))
+
+	log := logger.NewUPPLogger("Test", "FATAL")
+	actual, _ := parseMessage(base64.StdEncoding.EncodeToString([]byte(testMsg)), log)
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Expected: [%v]\nActual: [%v]", expected, actual)
 	}
@@ -140,7 +147,9 @@ X-Request-Id: SYNTHETIC-REQ-MON_Unv1K838lY
 
 		"",
 	}
-	actual, _ := parseMessage(base64.StdEncoding.EncodeToString([]byte(testMsg)))
+
+	log := logger.NewUPPLogger("Test", "FATAL")
+	actual, _ := parseMessage(base64.StdEncoding.EncodeToString([]byte(testMsg)), log)
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Expected: [%v]\nActual: [%v]", expected, actual)
 	}
@@ -156,7 +165,9 @@ Origin-System-Id: http://cmdb.ft.com/systems/methode-web-pub
 Content-Type: application/json
 X-Request-Id: SYNTHETIC-REQ-MON_Unv1K838lY`
 	expected := ""
-	actual, err := parseMessage(base64.StdEncoding.EncodeToString([]byte(testMsg)))
+
+	log := logger.NewUPPLogger("Test", "FATAL")
+	actual, err := parseMessage(base64.StdEncoding.EncodeToString([]byte(testMsg)), log)
 	if err != nil {
 		t.Fatalf("Error: [%v]", err)
 	}
@@ -182,7 +193,7 @@ X-Request-Id: SYNTHETIC-REQ-MON_Unv1K838lY`
 		"X-Request-Id":      "SYNTHETIC-REQ-MON_Unv1K838lY",
 	}
 
-	actual, _ := parseHeaders(testMsg)
+	actual := parseHeaders(testMsg)
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Expected: [%v]\nActual: [%v]", expected, actual)
 	}
@@ -204,7 +215,7 @@ X-Request-Id: SYNTHETIC-REQ-MON_Unv1K838lY`
 		"X-Request-Id":      "SYNTHETIC-REQ-MON_Unv1K838lY",
 	}
 
-	actual, _ := parseHeaders(testMsg)
+	actual := parseHeaders(testMsg)
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Expected: [%v]\nActual: [%v]", expected, actual)
 	}

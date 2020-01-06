@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	logger "github.com/Financial-Times/go-logger/v2"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,7 +23,7 @@ func setupMockKafka(t *testing.T, status int, response string) *httptest.Server 
 		if status != 200 {
 			w.WriteHeader(status)
 		} else {
-			w.Write([]byte(response))
+			_, _ = w.Write([]byte(response))
 		}
 		assert.Equal(t, "/topics", req.URL.Path)
 		assert.Equal(t, "my-first-auth-key", req.Header.Get("Authorization"))
@@ -38,7 +39,8 @@ func TestHappyConnectivityCheck(t *testing.T) {
 	defer proxy3.Close()
 
 	consumerConfigMock.Addrs = []string{proxy1.URL, proxy2.URL, proxy3.URL}
-	c := NewConsumer(consumerConfigMock, func(m Message) {}, &http.Client{})
+	log := logger.NewUPPLogger("Test", "FATAL")
+	c := NewConsumer(consumerConfigMock, func(m Message) {}, &http.Client{}, log)
 	msg, err := c.ConnectivityCheck()
 
 	assert.NoError(t, err, "It should not return an error")
@@ -54,10 +56,11 @@ func TestConnectivityCheckUnhappyKakfka(t *testing.T) {
 	defer proxy3.Close()
 
 	consumerConfigMock.Addrs = []string{proxy1.URL, proxy2.URL, proxy3.URL}
-	c := NewConsumer(consumerConfigMock, func(m Message) {}, &http.Client{})
+	log := logger.NewUPPLogger("Test", "FATAL")
+	c := NewConsumer(consumerConfigMock, func(m Message) {}, &http.Client{}, log)
 	msg, err := c.ConnectivityCheck()
 
-	assert.EqualError(t, err, "Could not connect to proxy: Unexpected response status 500. Expected: 200; ", "It should return an error")
+	assert.EqualError(t, err, "could not connect to proxy: unexpected response status 500. Expected: 200; ", "It should return an error")
 	assert.Equal(t, "Error connecting to consumer proxies", msg, `The check message should be "Error connecting to consumer proxies"`)
 }
 
@@ -68,7 +71,8 @@ func TestConnectivityCheckNoKafka(t *testing.T) {
 	defer proxy2.Close()
 
 	consumerConfigMock.Addrs = []string{proxy1.URL, proxy2.URL, "http://do.not.exist.com/"}
-	c := NewConsumer(consumerConfigMock, func(m Message) {}, &http.Client{})
+	log := logger.NewUPPLogger("Test", "FATAL")
+	c := NewConsumer(consumerConfigMock, func(m Message) {}, &http.Client{}, log)
 	msg, err := c.ConnectivityCheck()
 
 	assert.Error(t, err, "It should return an error")

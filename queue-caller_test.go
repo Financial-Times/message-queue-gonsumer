@@ -10,42 +10,52 @@ import (
 
 func TestBuildConsumerURL(t *testing.T) {
 	var tests = []struct {
-		c        consumer
-		q        defaultQueueCaller
+		c        consumerInstanceURI
+		q        kafkaRESTClient
 		expected string
 	}{
 		{
-			testConsumer,
-			defaultQueueCaller{
+			c: testConsumer,
+			q: kafkaRESTClient{
 				addrs:   []string{"https://localhost:8080/__kafka-rest-proxy"},
 				addrInd: 0,
 			},
-			"https://localhost:8080/__kafka-rest-proxy/consumers/group1/instances/rest-consumer-1-45864",
+			expected: "https://localhost:8080/__kafka-rest-proxy/consumers/group1/instances/rest-consumer-1-45864",
 		},
 		{
-			testConsumer,
-			defaultQueueCaller{
+			c: testConsumer,
+			q: kafkaRESTClient{
 				addrs:   []string{"http://kafka-proxy.prod.ft.com"},
 				addrInd: 0,
 			},
-			"http://kafka-proxy.prod.ft.com/consumers/group1/instances/rest-consumer-1-45864",
+			expected: "http://kafka-proxy.prod.ft.com/consumers/group1/instances/rest-consumer-1-45864",
 		},
 		{
-			testConsumer,
-			defaultQueueCaller{
+			c: testConsumer,
+			q: kafkaRESTClient{
 				addrs:   []string{"http://kafka-proxy-1.prod.ft.com", "http://kafka-proxy-2.prod.ft.com"},
 				addrInd: 0,
 			},
-			"http://kafka-proxy-1.prod.ft.com/consumers/group1/instances/rest-consumer-1-45864",
+			expected: "http://kafka-proxy-1.prod.ft.com/consumers/group1/instances/rest-consumer-1-45864",
 		},
 
 		{
-			testConsumer,
-			defaultQueueCaller{
+			c: testConsumer,
+			q: kafkaRESTClient{
 				addrs:   []string{"http://kafka-proxy-1.prod.ft.com", "http://kafka-proxy-2.prod.ft.com"},
 				addrInd: 1,
 			},
-			"http://kafka-proxy-2.prod.ft.com/consumers/group1/instances/rest-consumer-1-45864",
+			expected: "http://kafka-proxy-2.prod.ft.com/consumers/group1/instances/rest-consumer-1-45864",
+		},
+		{
+			c: consumerInstanceURI{
+				BaseURI: "http://kafka-rest%3A8080/consumers/group1/instances/rest-consumer-1-45864",
+			},
+			q: kafkaRESTClient{
+				addrs:   []string{"https://kafka-rest-proxy"},
+				addrInd: 0,
+			},
+			expected: "https://kafka-rest-proxy/consumers/group1/instances/rest-consumer-1-45864",
 		},
 	}
 
@@ -62,7 +72,7 @@ func TestBuildConsumerURL(t *testing.T) {
 }
 
 func TestCreateConsumerInstance_queueAddressesAreChangedInRoundRobinFashion(t *testing.T) {
-	queueCaller := &defaultQueueCaller{
+	queueCaller := &kafkaRESTClient{
 		addrs:  []string{"http://kafka-proxy-1.prod.ft.com", "http://kafka-proxy-2.prod.ft.com", "http://kafka-proxy-3.prod.ft.com"},
 		caller: testHTTPCaller{},
 	}
@@ -72,7 +82,7 @@ func TestCreateConsumerInstance_queueAddressesAreChangedInRoundRobinFashion(t *t
 		t.Errorf("Error [%v]", err)
 	}
 	if queueCaller.addrInd != 1 {
-		t.Errorf("Failure: active addres index is not correct. Expected: %d. Actual: %d.", 1, queueCaller.addrInd)
+		t.Errorf("Failure: active address index is not correct. Expected: %d. Actual: %d.", 1, queueCaller.addrInd)
 	}
 
 	_, err = queueCaller.createConsumerInstance()
@@ -80,7 +90,7 @@ func TestCreateConsumerInstance_queueAddressesAreChangedInRoundRobinFashion(t *t
 		t.Errorf("Error [%v]", err)
 	}
 	if queueCaller.addrInd != 2 {
-		t.Errorf("Failure: active addres index is not correct. Expected: %d. Actual: %d.", 2, queueCaller.addrInd)
+		t.Errorf("Failure: active address index is not correct. Expected: %d. Actual: %d.", 2, queueCaller.addrInd)
 	}
 
 	_, err = queueCaller.createConsumerInstance()
@@ -88,14 +98,13 @@ func TestCreateConsumerInstance_queueAddressesAreChangedInRoundRobinFashion(t *t
 		t.Errorf("Error [%v]", err)
 	}
 	if queueCaller.addrInd != 0 {
-		t.Errorf("Failure: active addres index is not correct. Expected: %d. Actual: %d.", 0, queueCaller.addrInd)
+		t.Errorf("Failure: active address index is not correct. Expected: %d. Actual: %d.", 0, queueCaller.addrInd)
 	}
 
 }
 
-var testConsumer = consumer{
-	"http://kafka/consumers/group1/instances/rest-consumer-1-45864",
-	"rest-consumer-1-45864",
+var testConsumer = consumerInstanceURI{
+	BaseURI: "http://kafka/consumers/group1/instances/rest-consumer-1-45864",
 }
 
 type testHTTPCaller struct {
@@ -107,7 +116,7 @@ func (t testHTTPCaller) DoReq(method, addr string, body io.Reader, headers map[s
 }
 
 func TestNoQueueAddressesFails(t *testing.T) {
-	q := defaultQueueCaller{}
+	q := kafkaRESTClient{}
 	err := q.checkConnectivity()
 
 	assert.EqualError(t, err, ErrNoQueueAddresses.Error())
