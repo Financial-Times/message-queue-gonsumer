@@ -54,16 +54,16 @@ func NewBatchedConsumer(config QueueConfig, handler func(m []Message), client *h
 }
 
 // NewAgeingConsumer returns a new instance of a Consumer with an AgeingClient
-func NewAgeingConsumer(config QueueConfig, handler func(m Message), agingClient AgeingClient, logger *log.UPPLogger) MessageConsumer {
+func NewAgeingConsumer(config QueueConfig, handler func(m Message), client *AgeingClient) MessageConsumer {
 	streamCount := 1
 	if config.StreamCount > 0 {
 		streamCount = config.StreamCount
 	}
 	instanceHandlers := make([]instanceHandler, streamCount)
 	for i := 0; i < streamCount; i++ {
-		instanceHandlers[i] = newConsumerInstance(config, handler, agingClient.Client, logger)
+		instanceHandlers[i] = newConsumerInstance(config, handler, client.HTTPClient, client.Logger)
 	}
-	agingClient.StartAgeingProcess()
+	client.StartAgeingProcess()
 
 	return &Consumer{streamCount, instanceHandlers}
 }
