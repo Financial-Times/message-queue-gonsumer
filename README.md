@@ -39,3 +39,4 @@ c := queueConsumer.NewConsumer(conf, func(m queueConsumer.Message) { /* process 
 go c.Start()
 c.Stop()
 ```
+test
