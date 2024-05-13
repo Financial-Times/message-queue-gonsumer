@@ -26,7 +26,7 @@ jobs:
           command: go build -mod=readonly -v ./...
       - run:
           name: Run Tests and Create Coverage Report
-          command: go test -mod=readonly -race -cover -coverprofile=${CIRCLE_COVERAGE_REPORT}/coverage.out ./... | go-junit-report > ${CIRCLE_TEST_REPORTS}/junit.xml
+          command: go test -mod=readonly -race -cover -coverprofile=${CIRCLE_COVERAGE_REPORT}/coverage.out ./...
       - run:
           name: Run Linters
           command: golangci-lint run --config=.golangci.yml
