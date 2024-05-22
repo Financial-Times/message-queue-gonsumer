@@ -26,13 +26,13 @@ jobs:
           command: go build -mod=readonly -v ./...
       - run:
           name: Run Tests and Create Coverage Report
-          command: go test -mod=readonly -race -cover -coverprofile=${CIRCLE_COVERAGE_REPORT}/coverage.out ./...
+          command: go test -mod=readonly -race -cover -coverprofile=${CIRCLE_COVERAGE_REPORT}/coverage.out ./... | go-junit-report > ${CIRCLE_TEST_REPORTS}/junit.xml
       - run:
           name: Run Linters
           command: golangci-lint run --config=.golangci.yml --new-from-rev=master
       - run:
           name: Upload Coverage
-          command: /go/bin/goveralls -coverprofile=${CIRCLE_COVERAGE_REPORT}/coverage.out -service=circle-ci -repotoken=${COVERALLS_TOKEN}
+          command: goveralls -coverprofile=${CIRCLE_COVERAGE_REPORT}/coverage.out -service=circle-ci -repotoken=${COVERALLS_TOKEN}
       - store_test_results:
           path: /tmp/test-results
 workflows:
