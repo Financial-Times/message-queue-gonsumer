@@ -3,7 +3,7 @@ jobs:
   build:
     working_directory: /message-queue-gonsumer
     docker:
-      - image: golang:1
+      - image: golang:latest
         environment:
           CIRCLE_TEST_REPORTS: /tmp/test-results
           CIRCLE_COVERAGE_REPORT: /tmp/coverage-results
@@ -14,8 +14,8 @@ jobs:
           command: |
             go install github.com/mattn/goveralls@latest
             go install github.com/jstemmer/go-junit-report@latest
-#            curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.21
-#            wget https://raw.githubusercontent.com/Financial-Times/upp-coding-standard/v1.3.2/golangci-config/.golangci.yml
+            curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.21
+            wget https://raw.githubusercontent.com/Financial-Times/upp-coding-standard/v1.0.0/golangci-config/.golangci.yml
       - run:
           name: Test Results
           command: |
@@ -29,7 +29,7 @@ jobs:
           command: go test -mod=readonly -race -cover -coverprofile=${CIRCLE_COVERAGE_REPORT}/coverage.out ./...
       - run:
           name: Run Linters
-          command: golangci-lint run --config=.golangci.yml
+          command: golangci-lint run --config=.golangci.yml --new-from-rev=master
       - run:
           name: Upload Coverage
           command: /go/bin/goveralls -coverprofile=${CIRCLE_COVERAGE_REPORT}/coverage.out -service=circle-ci -repotoken=${COVERALLS_TOKEN}
