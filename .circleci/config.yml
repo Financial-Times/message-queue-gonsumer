@@ -15,7 +15,7 @@ jobs:
             go install github.com/mattn/goveralls@latest
             go install github.com/jstemmer/go-junit-report@latest
             curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.21
-            wget https://raw.githubusercontent.com/Financial-Times/upp-coding-standard/v1.0.0/golangci-config/.golangci.yml
+            wget https://raw.githubusercontent.com/Financial-Times/upp-coding-standard/v1.3.2/golangci-config/.golangci.yml
       - run:
           name: Test Results
           command: |
